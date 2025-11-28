@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Layout, Menu, Button } from 'antd';
-import { DashboardOutlined, UserOutlined, SettingOutlined, LogoutOutlined } from '@ant-design/icons';
+import { DashboardOutlined, UserOutlined, SettingOutlined, LogoutOutlined, FileTextOutlined, DatabaseOutlined, AuditOutlined } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
@@ -19,9 +19,12 @@ export default function AdminLayout() {
   }, [location]);
 
   const items = [
-    { key: 'dashboard', icon: <DashboardOutlined />, label: 'داشبورد' },
-    { key: 'users', icon: <UserOutlined />, label: 'کاربران' },
-    { key: 'settings', icon: <SettingOutlined />, label: 'تنظیمات' },
+    { key: 'dashboard', icon: <DashboardOutlined />, label: 'داشبورد سراسری' },
+    { key: 'users', icon: <UserOutlined />, label: 'مدیریت کاربران (L2)' },
+    { key: 'structure', icon: <SettingOutlined />, label: 'مدیریت ساختار سامانه' },
+    { key: 'reports', icon: <FileTextOutlined />, label: 'گزارش‌گیری کلی' },
+    { key: 'backup', icon: <DatabaseOutlined />, label: 'پشتیبان‌گیری' },
+    { key: 'logs', icon: <AuditOutlined />, label: 'بخش لاگ‌ها' },
   ];
 
   return (
@@ -39,7 +42,8 @@ export default function AdminLayout() {
         />
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+        <Header style={{ background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontWeight: 600 }}>خوش آمدید، مدیر کل (L1)</div>
           <Button icon={<LogoutOutlined />} onClick={() => { signOut(); navigate('/login'); }}>
             خروج
           </Button>

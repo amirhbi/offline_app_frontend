@@ -20,12 +20,12 @@ export default function Login() {
   };
 
   return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
-      <Card style={{ width: 360 }}>
-        <Typography.Title level={3} style={{ textAlign: 'center' }}>
-          ورود مدیر
+    <div className="min-h-screen grid place-items-center">
+      <Card className="w-[360px]">
+        <Typography.Title level={5} className="text-center mb-4">
+          سامانه مدیریت داده خدمات ایمنی (آفلاین)
         </Typography.Title>
-        {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} />}
+        {error && <Alert type="error" message={error} className="mb-4" />}
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item name="username" label="نام کاربری" rules={[{ required: true }]}> 
             <Input placeholder="admin" />
@@ -39,6 +39,9 @@ export default function Login() {
             </Button>
           </Form.Item>
         </Form>
+        <p className="text-center text-sm text-gray-500">
+          (دسترسی فقط از طریق شبکه داخلی Intranet)
+        </p>
       </Card>
     </div>
   );

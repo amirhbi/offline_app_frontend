@@ -5,6 +5,9 @@ import { ConfigProvider, theme } from 'antd';
 import faIR from 'antd/locale/fa_IR';
 import 'antd/dist/reset.css';
 import './styles/global.css';
+import '@fontsource/vazirmatn/400.css';
+import '@fontsource/vazirmatn/500.css';
+import '@fontsource/vazirmatn/700.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
