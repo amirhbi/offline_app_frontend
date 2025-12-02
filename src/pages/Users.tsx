@@ -1,18 +1,21 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Table, Typography, Card, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
 type UserRow = {
   key: number;
   username: string;
+  nickname: string;
+  password?: string;
   forms: string[];
   reports: string[];
+  logs: string[];
 };
 
 export default function Users() {
   const [users, setUsers] = useState<UserRow[]>([
-    { key: 1, username: 'مدیر_بخش_اطفاء', forms: ['فرم ۲', 'فرم ۴'], reports: ['گزارش فرم ۲', 'گزارش فرم ۴'] },
-    { key: 2, username: 'مدیر_بخش_اعلام', forms: ['فرم ۳'], reports: ['گزارش فرم ۳'] },
+    { key: 1, username: 'admin1', nickname: 'مدیر_بخش_اطفاء', forms: ['فرم ۲', 'فرم ۴'], reports: ['گزارش فرم ۲', 'گزارش فرم ۴'], logs: ['لاگ سیستم'] },
+    { key: 2, username: 'admin2', nickname: 'مدیر_بخش_اعلام', forms: ['فرم ۳'], reports: ['گزارش فرم ۳'], logs: [] },
   ]);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -23,12 +26,73 @@ export default function Users() {
 
   const formOptions = useMemo(() => ['فرم ۲', 'فرم ۳', 'فرم ۴'], []);
   const reportOptions = useMemo(() => ['گزارش فرم ۲', 'گزارش فرم ۳', 'گزارش فرم ۴'], []);
+  const logsOptions = useMemo(() => ['لاگ سیستم', 'لاگ کاربری', 'لاگ پشتیبان‌گیری', 'لاگ عملیات'], []);
+
+  // Map each form to the reports it enables
+  const formReportMap = useMemo<Record<string, string[]>>(
+    () => ({
+      'فرم ۲': ['گزارش فرم ۲'],
+      'فرم ۳': ['گزارش فرم ۳'],
+      'فرم ۴': ['گزارش فرم ۴'],
+    }),
+    []
+  );
+
+  // Watch selected forms in create/edit forms
+  const selectedCreateForms = Form.useWatch('forms', createForm) || [];
+  const selectedEditForms = Form.useWatch('forms', editForm) || [];
+
+  // Build filtered report options based on selected forms (create)
+  const filteredCreateReportOptions = useMemo(() => {
+    const allowed = new Set<string>();
+    (selectedCreateForms || []).forEach((f: string) => {
+      (formReportMap[f] || []).forEach((r) => allowed.add(r));
+    });
+    return Array.from(allowed).map((r) => ({ value: r, label: r }));
+  }, [selectedCreateForms, formReportMap]);
+
+  // Build filtered report options based on selected forms (edit)
+  const filteredEditReportOptions = useMemo(() => {
+    const allowed = new Set<string>();
+    (selectedEditForms || []).forEach((f: string) => {
+      (formReportMap[f] || []).forEach((r) => allowed.add(r));
+    });
+    return Array.from(allowed).map((r) => ({ value: r, label: r }));
+  }, [selectedEditForms, formReportMap]);
+
+  // Prune selected reports if they become invalid when forms change (create)
+  useEffect(() => {
+    const current: string[] = createForm.getFieldValue('reports') || [];
+    const allowed = new Set(filteredCreateReportOptions.map((o) => o.value));
+    const next = current.filter((r) => allowed.has(r));
+    if (current.length !== next.length) {
+      createForm.setFieldsValue({ reports: next });
+    }
+  }, [filteredCreateReportOptions, createForm]);
+
+  // Prune selected reports if they become invalid when forms change (edit)
+  useEffect(() => {
+    const current: string[] = editForm.getFieldValue('reports') || [];
+    const allowed = new Set(filteredEditReportOptions.map((o) => o.value));
+    const next = current.filter((r) => allowed.has(r));
+    if (current.length !== next.length) {
+      editForm.setFieldsValue({ reports: next });
+    }
+  }, [filteredEditReportOptions, editForm]);
 
   const handleCreate = async () => {
     try {
       const values = await createForm.validateFields();
       const nextKey = (users.reduce((m, u) => Math.max(m, u.key), 0) || 0) + 1;
-      const newUser: UserRow = { key: nextKey, username: values.username, forms: values.forms || [], reports: values.reports || [] };
+      const newUser: UserRow = {
+        key: nextKey,
+        username: values.username,
+        nickname: values.nickname || '',
+        password: values.password,
+        forms: values.forms || [],
+        reports: values.reports || [],
+        logs: values.logs || [],
+      };
       setUsers((prev) => [...prev, newUser]);
       setCreateOpen(false);
       createForm.resetFields();
@@ -39,14 +103,26 @@ export default function Users() {
   const startEdit = (record: UserRow) => {
     setEditingUser(record);
     setEditOpen(true);
-    editForm.setFieldsValue({ username: record.username, forms: record.forms, reports: record.reports });
+    editForm.setFieldsValue({ username: record.username, nickname: record.nickname || '', forms: record.forms, reports: record.reports, logs: record.logs });
   };
 
   const handleEdit = async () => {
     try {
       const values = await editForm.validateFields();
       if (!editingUser) return;
-      setUsers((prev) => prev.map((u) => (u.key === editingUser.key ? { ...u, username: values.username, forms: values.forms || [], reports: values.reports || [] } : u)));
+      setUsers((prev) => prev.map((u) => (
+        u.key === editingUser.key
+          ? {
+              ...u,
+              username: values.username,
+              nickname: values.nickname || '',
+              password: values.password ? values.password : u.password,
+              forms: values.forms || [],
+              reports: values.reports || [],
+              logs: values.logs || [],
+            }
+          : u
+      )));
       setEditOpen(false);
       setEditingUser(null);
       message.success('ویرایش کاربر انجام شد');
@@ -62,40 +138,61 @@ export default function Users() {
     <Card className="border border-red-300">
       <Space style={{ width: '100%', justifyContent: 'space-between' }} className="mb-4">
         <Typography.Title level={4} className="!mb-0 text-red-600">
-           مدیریت کاربران (L2)
+           مدیریت کاربران 
         </Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>ایجاد مدیر بخشی جدید</Button>
       </Space>
       <Typography.Paragraph className="mt-0">
-        ایجاد، ویرایش و حذف حساب‌های کاربری مدیران بخشی (L2).
+        ایجاد، ویرایش و حذف حساب‌های کاربری مدیران بخشی.
       </Typography.Paragraph>
       <Table<UserRow>
         dataSource={users}
         rowKey="key"
         pagination={false}
         columns={[
-          { title: 'نام کاربری L2', dataIndex: 'username' },
+          { title: 'نام کاربری', dataIndex: 'username' },
+          { title: 'نام نمایشی', dataIndex: 'nickname' },
           {
             title: 'دسترسی فرم‌ها',
             dataIndex: 'forms',
-            render: (forms: string[]) => (
-              <Space wrap>
-                {forms.map((f) => (
-                  <Tag key={f} color="blue">{f}</Tag>
-                ))}
-              </Space>
-            ),
+            render: (forms: string[]) =>
+              forms && forms.length > 0 ? (
+                <Space wrap>
+                  {forms.map((f) => (
+                    <Tag key={f} color="blue">{f}</Tag>
+                  ))}
+                </Space>
+              ) : (
+                '-'
+              ),
           },
           {
             title: 'دسترسی گزارش‌ها',
             dataIndex: 'reports',
-            render: (reports: string[]) => (
-              <Space wrap>
-                {reports.map((r) => (
-                  <Tag key={r} color="green">{r}</Tag>
-                ))}
-              </Space>
-            ),
+            render: (reports: string[]) =>
+              reports && reports.length > 0 ? (
+                <Space wrap>
+                  {reports.map((r) => (
+                    <Tag key={r} color="green">{r}</Tag>
+                  ))}
+                </Space>
+              ) : (
+                '-'
+              ),
+          },
+          {
+            title: 'دسترسی لاگ‌ها',
+            dataIndex: 'logs',
+            render: (logs: string[]) =>
+              logs && logs.length > 0 ? (
+                <Space wrap>
+                  {logs.map((l) => (
+                    <Tag key={l} color="volcano">{l}</Tag>
+                  ))}
+                </Space>
+              ) : (
+                '-'
+              ),
           },
           {
             title: 'عملیات',
@@ -130,11 +227,25 @@ export default function Users() {
           <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}> 
             <Input placeholder="manager_branch_X" />
           </Form.Item>
+          <Form.Item name="nickname" label="نام نمایشی" initialValue="" rules={[{ required: true, message: 'نام نمایشی را وارد کنید' }]}> 
+            <Input placeholder="مدیر_بخش_اطفاء" />
+          </Form.Item>
+          <Form.Item name="password" label="رمز عبور" rules={[{ required: true, message: 'رمز عبور را وارد کنید' }]}> 
+            <Input.Password placeholder="••••••••" />
+          </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formOptions.map((f) => ({ value: f, label: f }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
-            <Select mode="multiple" placeholder="انتخاب گزارش‌ها" options={reportOptions.map((r) => ({ value: r, label: r }))} />
+            <Select
+              mode="multiple"
+              placeholder="انتخاب گزارش‌ها (براساس فرم‌های انتخاب‌شده)"
+              options={filteredCreateReportOptions}
+              disabled={(selectedCreateForms || []).length === 0}
+            />
+          </Form.Item>
+          <Form.Item name="logs" label="دسترسی لاگ‌ها">
+            <Select mode="multiple" placeholder="انتخاب لاگ‌ها" options={logsOptions.map((l) => ({ value: l, label: l }))} />
           </Form.Item>
         </Form>
       </Modal>
@@ -152,11 +263,25 @@ export default function Users() {
           <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}> 
             <Input />
           </Form.Item>
+          <Form.Item name="nickname" label="نام نمایشی" initialValue="" rules={[{ required: true, message: 'نام نمایشی را وارد کنید' }]}> 
+            <Input />
+          </Form.Item>
+          <Form.Item name="password" label="رمز عبور (در صورت تغییر)"> 
+            <Input.Password placeholder="رمز عبور جدید" />
+          </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formOptions.map((f) => ({ value: f, label: f }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
-            <Select mode="multiple" placeholder="انتخاب گزارش‌ها" options={reportOptions.map((r) => ({ value: r, label: r }))} />
+            <Select
+              mode="multiple"
+              placeholder="انتخاب گزارش‌ها (براساس فرم‌های انتخاب‌شده)"
+              options={filteredEditReportOptions}
+              disabled={(selectedEditForms || []).length === 0}
+            />
+          </Form.Item>
+          <Form.Item name="logs" label="دسترسی لاگ‌ها">
+            <Select mode="multiple" placeholder="انتخاب لاگ‌ها" options={logsOptions.map((l) => ({ value: l, label: l }))} />
           </Form.Item>
         </Form>
       </Modal>

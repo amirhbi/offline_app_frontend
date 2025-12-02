@@ -20,7 +20,7 @@ export default function AdminLayout() {
 
   const items = [
     { key: 'dashboard', icon: <DashboardOutlined />, label: 'داشبورد سراسری' },
-    { key: 'users', icon: <UserOutlined />, label: 'مدیریت کاربران (L2)' },
+    { key: 'users', icon: <UserOutlined />, label: 'مدیریت کاربران' },
     { key: 'structure', icon: <SettingOutlined />, label: 'مدیریت ساختار سامانه' },
     { key: 'reports', icon: <FileTextOutlined />, label: 'گزارش‌گیری کلی' },
     { key: 'backup', icon: <DatabaseOutlined />, label: 'پشتیبان‌گیری' },
