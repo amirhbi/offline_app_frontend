@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button, Card, Form, Input, Typography, Alert } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import logo from '../assets/fire_department.png';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function Login() {
   return (
     <div className="min-h-screen grid place-items-center">
       <Card className="w-[360px]">
+        <img src={logo} alt="لوگو" className="mx-auto mb-4 block" width={72} height={72} />
         <Typography.Title level={5} className="text-center mb-4">
           سامانه مدیریت داده خدمات ایمنی (آفلاین)
         </Typography.Title>
@@ -39,9 +41,6 @@ export default function Login() {
             </Button>
           </Form.Item>
         </Form>
-        <p className="text-center text-sm text-gray-500">
-          (دسترسی فقط از طریق شبکه داخلی Intranet)
-        </p>
       </Card>
     </div>
   );
