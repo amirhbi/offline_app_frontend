@@ -163,7 +163,7 @@ export default function Users() {
                   ))}
                 </Space>
               ) : (
-                '-'
+                'دسترسی داده نشده است'
               ),
           },
           {
@@ -177,7 +177,7 @@ export default function Users() {
                   ))}
                 </Space>
               ) : (
-                '-'
+                'دسترسی داده نشده است'
               ),
           },
           {
@@ -191,7 +191,7 @@ export default function Users() {
                   ))}
                 </Space>
               ) : (
-                '-'
+                'دسترسی داده نشده است'
               ),
           },
           {
