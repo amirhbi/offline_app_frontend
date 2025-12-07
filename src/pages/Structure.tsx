@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Typography,
@@ -30,22 +30,7 @@ interface FormDefinition {
   updatedAt: string;
 }
 
-const STORAGE_KEY = 'app_forms';
-
-function loadForms(): FormDefinition[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveForms(forms: FormDefinition[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(forms));
-}
+const API_BASE = '/api';
 
 export default function Structure() {
   const [forms, setForms] = useState<FormDefinition[]>([]);
@@ -53,8 +38,20 @@ export default function Structure() {
   const [editingForm, setEditingForm] = useState<FormDefinition | null>(null);
   const [form] = Form.useForm();
 
+  const fetchForms = async () => {
+    const res = await fetch(`${API_BASE}/forms`);
+    const data = await res.json();
+    const mapped: FormDefinition[] = (data || []).map((f: any) => ({
+      id: f._id ?? f.id,
+      name: f.name,
+      fields: f.fields || [],
+      updatedAt: f.updatedAt || f.createdAt || new Date().toISOString(),
+    }));
+    setForms(mapped);
+  };
+
   useEffect(() => {
-    setForms(loadForms());
+    fetchForms();
   }, []);
 
   const openCreate = () => {
@@ -95,34 +92,43 @@ export default function Structure() {
             : undefined,
       }));
 
-      const id = editingForm?.id ?? `form_${Date.now()}`;
-      const updatedAt = new Date().toISOString();
-      const newForm: FormDefinition = {
-        id,
-        name: values.name,
-        fields: normalizedFields,
-        updatedAt,
-      };
+      if (editingForm) {
+        const res = await fetch(`${API_BASE}/forms/${editingForm.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name, fields: normalizedFields }),
+        });
+        if (!res.ok) throw new Error('Failed to update');
+        await fetchForms();
+        message.success('فرم ویرایش شد');
+      } else {
+        const res = await fetch(`${API_BASE}/forms`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: values.name, fields: normalizedFields }),
+        });
+        if (!res.ok) throw new Error('Failed to create');
+        await fetchForms();
+        message.success('فرم ایجاد شد');
+      }
 
-      const nextForms = editingForm
-        ? forms.map((f) => (f.id === id ? newForm : f))
-        : [newForm, ...forms];
-
-      setForms(nextForms);
-      saveForms(nextForms);
       setIsModalOpen(false);
       setEditingForm(null);
-      message.success(editingForm ? 'فرم ویرایش شد' : 'فرم ایجاد شد');
     } catch (e) {
       // validation errors are handled by antd
     }
   };
 
   const deleteForm = (id: string) => {
-    const nextForms = forms.filter((f) => f.id !== id);
-    setForms(nextForms);
-    saveForms(nextForms);
-    message.success('فرم حذف شد');
+    fetch(`${API_BASE}/forms/${id}`, { method: 'DELETE' })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to delete');
+      })
+      .then(async () => {
+        await fetchForms();
+        message.success('فرم حذف شد');
+      })
+      .catch(() => message.error('حذف فرم ناموفق بود'));
   };
 
   const columns = [
