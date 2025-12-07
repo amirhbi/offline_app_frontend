@@ -207,13 +207,19 @@ export default function Structure() {
                       >
                         <Input style={{ width: 180 }} />
                       </Form.Item>
-
+                      <Form.Item
+                        name={[field.name, 'name']}
+                        label="نام فیلد"
+                        rules={[{ required: true, message: 'نام فیلد الزامی است' }]}
+                      >
+                        <Input style={{ width: 180 }} />
+                      </Form.Item>
                       <Form.Item
                         name={[field.name, 'type']}
-                        label="نوع فیلد"
+                        label="نوع داده"
                         rules={[{
                           required: true,
-                          message: 'نوع فیلد را انتخاب کنید',
+                          message: 'نوع داده را انتخاب کنید',
                         }]}
                       >
                         <Select
