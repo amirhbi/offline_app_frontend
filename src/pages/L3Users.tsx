@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Table, Typography, Card, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { createUser, deleteUser, listUsers, updateUser, UserRecord } from '../api/users';
+import { listForms, FormRecord } from '../api/forms';
 
 type L3UserRow = UserRecord;
 
@@ -15,7 +16,11 @@ export default function L3Users() {
   const [createForm] = Form.useForm<L3UserRow>();
   const [editForm] = Form.useForm<L3UserRow>();
 
-  const formOptions = useMemo(() => ['فرم ۲', 'فرم ۳', 'فرم ۴'], []);
+  const [formsList, setFormsList] = useState<FormRecord[]>([]);
+  const formNameById = useMemo<Record<string, string>>(
+    () => Object.fromEntries(formsList.map((f) => [f.id, f.name])),
+    [formsList]
+  );
   const reportOptions = useMemo(() => ['گزارش فرم ۲', 'گزارش فرم ۳', 'گزارش فرم ۴'], []);
 
   useEffect(() => {
@@ -31,6 +36,18 @@ export default function L3Users() {
       }
     };
     load();
+  }, []);
+
+  useEffect(() => {
+    const loadForms = async () => {
+      try {
+        const forms = await listForms();
+        setFormsList(forms);
+      } catch (err: any) {
+        message.error(err?.message || 'خطا در دریافت فرم‌ها');
+      }
+    };
+    loadForms();
   }, []);
 
   const handleCreate = async () => {
@@ -50,7 +67,13 @@ export default function L3Users() {
   const startEdit = (record: L3UserRow) => {
     setEditingUser(record);
     setEditOpen(true);
-    editForm.setFieldsValue({ username: record.username, forms: record.forms, reports: record.reports });
+    const mappedFormIds = (record.forms || []).map((v) => {
+      const byId = formsList.find((f) => f.id === v);
+      if (byId) return v;
+      const byName = formsList.find((f) => f.name === v);
+      return byName ? byName.id : v;
+    });
+    editForm.setFieldsValue({ username: record.username, forms: mappedFormIds, reports: record.reports });
   };
 
   const handleEdit = async () => {
@@ -102,7 +125,7 @@ export default function L3Users() {
             render: (forms: string[]) => (
               <Space wrap>
                 {forms.map((f) => (
-                  <Tag key={f} color="blue">{f}</Tag>
+                  <Tag key={f} color="blue">{formNameById[f] || f}</Tag>
                 ))}
               </Space>
             ),
@@ -152,7 +175,7 @@ export default function L3Users() {
             <Input placeholder="operator_branch_X" />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
-            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formOptions.map((f) => ({ value: f, label: f }))} />
+            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
             <Select mode="multiple" placeholder="انتخاب گزارش‌ها" options={reportOptions.map((r) => ({ value: r, label: r }))} />
@@ -174,7 +197,7 @@ export default function L3Users() {
             <Input />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
-            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formOptions.map((f) => ({ value: f, label: f }))} />
+            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
             <Select mode="multiple" placeholder="انتخاب گزارش‌ها" options={reportOptions.map((r) => ({ value: r, label: r }))} />

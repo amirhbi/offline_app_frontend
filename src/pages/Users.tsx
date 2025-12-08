@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Table, Typography, Card, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { createUser, deleteUser, listUsers, updateUser, UserRecord } from '../api/users';
-import { listForms } from '../api/forms';
+import { listForms, FormRecord } from '../api/forms';
 
 type UserRow = UserRecord;
 
@@ -16,7 +16,7 @@ export default function Users() {
   const [createForm] = Form.useForm<UserRow>();
   const [editForm] = Form.useForm<UserRow>();
 
-  const [formOptions, setFormOptions] = useState<string[]>([]);
+  const [formsList, setFormsList] = useState<FormRecord[]>([]);
   const reportOptions = useMemo(() => ['گزارش فرم ۲', 'گزارش فرم ۳', 'گزارش فرم ۴'], []);
   const logsOptions = useMemo(() => ['لاگ سیستم', 'لاگ کاربری', 'لاگ پشتیبان‌گیری', 'لاگ عملیات'], []);
 
@@ -33,6 +33,11 @@ export default function Users() {
   // Track selected forms for create/edit independently
   const [selectedCreateForms, setSelectedCreateForms] = useState<string[]>([]);
   const [selectedEditForms, setSelectedEditForms] = useState<string[]>([]);
+
+  const formNameById = useMemo<Record<string, string>>(
+    () => Object.fromEntries(formsList.map((f) => [f.id, f.name])),
+    [formsList]
+  );
 
   // Load users on mount
   useEffect(() => {
@@ -55,7 +60,7 @@ export default function Users() {
     const loadForms = async () => {
       try {
         const forms = await listForms();
-        setFormOptions(forms.map((f) => f.name));
+        setFormsList(forms);
       } catch (err: any) {
         message.error(err?.message || 'خطا در دریافت فرم‌ها');
       }
@@ -66,20 +71,26 @@ export default function Users() {
   // Build filtered report options based on selected forms (create)
   const filteredCreateReportOptions = useMemo(() => {
     const allowed = new Set<string>();
-    (selectedCreateForms || []).forEach((f: string) => {
-      (formReportMap[f] || []).forEach((r) => allowed.add(r));
-    });
-    return Array.from(allowed).map((r) => ({ value: r, label: r }));
-  }, [selectedCreateForms, formReportMap]);
+    (selectedCreateForms || [])
+      .map((id) => formNameById[id] || id)
+      .forEach((name) => {
+        (formReportMap[name] || []).forEach((r) => allowed.add(r));
+      });
+    const list = Array.from(allowed).map((r) => ({ value: r, label: r }));
+    return list.length > 0 ? list : reportOptions.map((r) => ({ value: r, label: r }));
+  }, [selectedCreateForms, formReportMap, formNameById, reportOptions]);
 
   // Build filtered report options based on selected forms (edit)
   const filteredEditReportOptions = useMemo(() => {
     const allowed = new Set<string>();
-    (selectedEditForms || []).forEach((f: string) => {
-      (formReportMap[f] || []).forEach((r) => allowed.add(r));
-    });
-    return Array.from(allowed).map((r) => ({ value: r, label: r }));
-  }, [selectedEditForms, formReportMap]);
+    (selectedEditForms || [])
+      .map((id) => formNameById[id] || id)
+      .forEach((name) => {
+        (formReportMap[name] || []).forEach((r) => allowed.add(r));
+      });
+    const list = Array.from(allowed).map((r) => ({ value: r, label: r }));
+    return list.length > 0 ? list : reportOptions.map((r) => ({ value: r, label: r }));
+  }, [selectedEditForms, formReportMap, formNameById, reportOptions]);
 
   // Prune selected reports if they become invalid when forms change (create)
   useEffect(() => {
@@ -126,8 +137,14 @@ export default function Users() {
   const startEdit = (record: UserRow) => {
     setEditingUser(record);
     setEditOpen(true);
-    editForm.setFieldsValue({ username: record.username, nickname: record.nickname || '', forms: record.forms, reports: record.reports, logs: record.logs });
-    setSelectedEditForms(record.forms || []);
+    const mappedFormIds = (record.forms || []).map((v) => {
+      const byId = formsList.find((f) => f.id === v);
+      if (byId) return v;
+      const byName = formsList.find((f) => f.name === v);
+      return byName ? byName.id : v;
+    });
+    editForm.setFieldsValue({ username: record.username, nickname: record.nickname || '', forms: mappedFormIds, reports: record.reports, logs: record.logs });
+    setSelectedEditForms(mappedFormIds || []);
   };
 
   const handleEdit = async () => {
@@ -187,7 +204,7 @@ export default function Users() {
               forms && forms.length > 0 ? (
                 <Space wrap>
                   {forms.map((f) => (
-                    <Tag key={f} color="blue">{f}</Tag>
+                    <Tag key={f} color="blue">{formNameById[f] || f}</Tag>
                   ))}
                 </Space>
               ) : (
@@ -266,7 +283,7 @@ export default function Users() {
             <Input.Password placeholder="••••••••" />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
-            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formOptions.map((f) => ({ value: f, label: f }))} />
+            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
             <Select
@@ -306,7 +323,7 @@ export default function Users() {
             <Input.Password placeholder="رمز عبور جدید" />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
-            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formOptions.map((f) => ({ value: f, label: f }))} />
+            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
             <Select
