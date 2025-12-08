@@ -16,19 +16,13 @@ export default function Users() {
   const [createForm] = Form.useForm<UserRow>();
   const [editForm] = Form.useForm<UserRow>();
 
+  const truncateText = (s: string, max = 20) => (s && s.length > max ? s.slice(0, max) + '...' : s);
+
   const [formsList, setFormsList] = useState<FormRecord[]>([]);
-  const reportOptions = useMemo(() => ['گزارش فرم ۲', 'گزارش فرم ۳', 'گزارش فرم ۴'], []);
+  const reportOptions = useMemo(() => formsList.map((f) => `گزارش ${f.name}`), [formsList]);
   const logsOptions = useMemo(() => ['لاگ سیستم', 'لاگ کاربری', 'لاگ پشتیبان‌گیری', 'لاگ عملیات'], []);
 
-  // Map each form to the reports it enables
-  const formReportMap = useMemo<Record<string, string[]>>(
-    () => ({
-      'فرم ۲': ['گزارش فرم ۲'],
-      'فرم ۳': ['گزارش فرم ۳'],
-      'فرم ۴': ['گزارش فرم ۴'],
-    }),
-    []
-  );
+  // گزارش‌های مرتبط هر فرم: گزارش {نام فرم}
 
   // Track selected forms for create/edit independently
   const [selectedCreateForms, setSelectedCreateForms] = useState<string[]>([]);
@@ -73,24 +67,20 @@ export default function Users() {
     const allowed = new Set<string>();
     (selectedCreateForms || [])
       .map((id) => formNameById[id] || id)
-      .forEach((name) => {
-        (formReportMap[name] || []).forEach((r) => allowed.add(r));
-      });
+      .forEach((name) => allowed.add(`گزارش ${name}`));
     const list = Array.from(allowed).map((r) => ({ value: r, label: r }));
     return list.length > 0 ? list : reportOptions.map((r) => ({ value: r, label: r }));
-  }, [selectedCreateForms, formReportMap, formNameById, reportOptions]);
+  }, [selectedCreateForms, formNameById, reportOptions]);
 
   // Build filtered report options based on selected forms (edit)
   const filteredEditReportOptions = useMemo(() => {
     const allowed = new Set<string>();
     (selectedEditForms || [])
       .map((id) => formNameById[id] || id)
-      .forEach((name) => {
-        (formReportMap[name] || []).forEach((r) => allowed.add(r));
-      });
+      .forEach((name) => allowed.add(`گزارش ${name}`));
     const list = Array.from(allowed).map((r) => ({ value: r, label: r }));
     return list.length > 0 ? list : reportOptions.map((r) => ({ value: r, label: r }));
-  }, [selectedEditForms, formReportMap, formNameById, reportOptions]);
+  }, [selectedEditForms, formNameById, reportOptions]);
 
   // Prune selected reports if they become invalid when forms change (create)
   useEffect(() => {
@@ -204,7 +194,7 @@ export default function Users() {
               forms && forms.length > 0 ? (
                 <Space wrap>
                   {forms.map((f) => (
-                    <Tag key={f} color="blue">{formNameById[f] || f}</Tag>
+                    <Tag key={f} color="blue">{truncateText(formNameById[f] || f)}</Tag>
                   ))}
                 </Space>
               ) : (
@@ -218,7 +208,7 @@ export default function Users() {
               reports && reports.length > 0 ? (
                 <Space wrap>
                   {reports.map((r) => (
-                    <Tag key={r} color="green">{r}</Tag>
+                    <Tag key={r} color="green">{truncateText(r)}</Tag>
                   ))}
                 </Space>
               ) : (
@@ -232,7 +222,7 @@ export default function Users() {
               logs && logs.length > 0 ? (
                 <Space wrap>
                   {logs.map((l) => (
-                    <Tag key={l} color="volcano">{l}</Tag>
+                    <Tag key={l} color="volcano">{truncateText(l)}</Tag>
                   ))}
                 </Space>
               ) : (

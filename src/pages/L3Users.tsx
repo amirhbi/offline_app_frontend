@@ -21,6 +21,7 @@ export default function L3Users() {
     () => Object.fromEntries(formsList.map((f) => [f.id, f.name])),
     [formsList]
   );
+  const truncateText = (s: string, max = 20) => (s && s.length > max ? s.slice(0, max) + '...' : s);
   const reportOptions = useMemo(() => ['گزارش فرم ۲', 'گزارش فرم ۳', 'گزارش فرم ۴'], []);
 
   useEffect(() => {
@@ -125,7 +126,7 @@ export default function L3Users() {
             render: (forms: string[]) => (
               <Space wrap>
                 {forms.map((f) => (
-                  <Tag key={f} color="blue">{formNameById[f] || f}</Tag>
+                  <Tag key={f} color="blue">{truncateText(formNameById[f] || f)}</Tag>
                 ))}
               </Space>
             ),
@@ -136,7 +137,7 @@ export default function L3Users() {
             render: (reports: string[]) => (
               <Space wrap>
                 {reports.map((r) => (
-                  <Tag key={r} color="green">{r}</Tag>
+                  <Tag key={r} color="green">{truncateText(r)}</Tag>
                 ))}
               </Space>
             ),
