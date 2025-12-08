@@ -1,22 +1,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Table, Typography, Card, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { createUser, deleteUser, listUsers, updateUser, UserRecord } from '../api/users';
+import { listForms } from '../api/forms';
 
-type UserRow = {
-  key: number;
-  username: string;
-  nickname: string;
-  password?: string;
-  forms: string[];
-  reports: string[];
-  logs: string[];
-};
+type UserRow = UserRecord;
 
 export default function Users() {
-  const [users, setUsers] = useState<UserRow[]>([
-    { key: 1, username: 'admin1', nickname: 'مدیر_بخش_اطفاء', forms: ['فرم ۲', 'فرم ۴'], reports: ['گزارش فرم ۲', 'گزارش فرم ۴'], logs: ['لاگ سیستم'] },
-    { key: 2, username: 'admin2', nickname: 'مدیر_بخش_اعلام', forms: ['فرم ۳'], reports: ['گزارش فرم ۳'], logs: [] },
-  ]);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -24,7 +16,7 @@ export default function Users() {
   const [createForm] = Form.useForm<UserRow>();
   const [editForm] = Form.useForm<UserRow>();
 
-  const formOptions = useMemo(() => ['فرم ۲', 'فرم ۳', 'فرم ۴'], []);
+  const [formOptions, setFormOptions] = useState<string[]>([]);
   const reportOptions = useMemo(() => ['گزارش فرم ۲', 'گزارش فرم ۳', 'گزارش فرم ۴'], []);
   const logsOptions = useMemo(() => ['لاگ سیستم', 'لاگ کاربری', 'لاگ پشتیبان‌گیری', 'لاگ عملیات'], []);
 
@@ -38,9 +30,38 @@ export default function Users() {
     []
   );
 
-  // Watch selected forms in create/edit forms
-  const selectedCreateForms = Form.useWatch('forms', createForm) || [];
-  const selectedEditForms = Form.useWatch('forms', editForm) || [];
+  // Track selected forms for create/edit independently
+  const [selectedCreateForms, setSelectedCreateForms] = useState<string[]>([]);
+  const [selectedEditForms, setSelectedEditForms] = useState<string[]>([]);
+
+  // Load users on mount
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await listUsers('admin');
+        setUsers(data);
+      } catch (err: any) {
+        message.error(err?.message || 'خطا در دریافت کاربران');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  // Load forms options from API
+  useEffect(() => {
+    const loadForms = async () => {
+      try {
+        const forms = await listForms();
+        setFormOptions(forms.map((f) => f.name));
+      } catch (err: any) {
+        message.error(err?.message || 'خطا در دریافت فرم‌ها');
+      }
+    };
+    loadForms();
+  }, []);
 
   // Build filtered report options based on selected forms (create)
   const filteredCreateReportOptions = useMemo(() => {
@@ -83,55 +104,61 @@ export default function Users() {
   const handleCreate = async () => {
     try {
       const values = await createForm.validateFields();
-      const nextKey = (users.reduce((m, u) => Math.max(m, u.key), 0) || 0) + 1;
-      const newUser: UserRow = {
-        key: nextKey,
+      const payload = {
         username: values.username,
         nickname: values.nickname || '',
         password: values.password,
+        role: 'admin' as const,
         forms: values.forms || [],
         reports: values.reports || [],
         logs: values.logs || [],
       };
-      setUsers((prev) => [...prev, newUser]);
+      const created = await createUser(payload);
+      setUsers((prev) => [created, ...prev]);
       setCreateOpen(false);
       createForm.resetFields();
       message.success('کاربر جدید ایجاد شد');
-    } catch (err) { /* ignore */ }
+    } catch (err: any) {
+      message.error(err?.message || 'ایجاد کاربر ناموفق بود');
+    }
   };
 
   const startEdit = (record: UserRow) => {
     setEditingUser(record);
     setEditOpen(true);
     editForm.setFieldsValue({ username: record.username, nickname: record.nickname || '', forms: record.forms, reports: record.reports, logs: record.logs });
+    setSelectedEditForms(record.forms || []);
   };
 
   const handleEdit = async () => {
     try {
       const values = await editForm.validateFields();
       if (!editingUser) return;
-      setUsers((prev) => prev.map((u) => (
-        u.key === editingUser.key
-          ? {
-              ...u,
-              username: values.username,
-              nickname: values.nickname || '',
-              password: values.password ? values.password : u.password,
-              forms: values.forms || [],
-              reports: values.reports || [],
-              logs: values.logs || [],
-            }
-          : u
-      )));
+      const updated = await updateUser(editingUser.id, {
+        username: values.username,
+        nickname: values.nickname || '',
+        password: values.password || undefined,
+        forms: values.forms || [],
+        reports: values.reports || [],
+        logs: values.logs || [],
+      });
+      setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updated : u)));
       setEditOpen(false);
       setEditingUser(null);
       message.success('ویرایش کاربر انجام شد');
-    } catch (err) { /* ignore */ }
+    } catch (err: any) {
+      message.error(err?.message || 'ویرایش کاربر ناموفق بود');
+    }
   };
 
-  const handleDelete = (key: number) => {
-    setUsers((prev) => prev.filter((u) => u.key !== key));
-    message.success('کاربر حذف شد');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteUser(id);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      message.success('کاربر حذف شد');
+    } catch (err: any) {
+      message.error(err?.message || 'حذف کاربر ناموفق بود');
+    }
   };
 
   return (
@@ -147,7 +174,8 @@ export default function Users() {
       </Typography.Paragraph>
       <Table<UserRow>
         dataSource={users}
-        rowKey="key"
+        rowKey="id"
+        loading={loading}
         pagination={false}
         columns={[
           { title: 'نام کاربری', dataIndex: 'username' },
@@ -204,7 +232,7 @@ export default function Users() {
                   description="آیا از حذف این کاربر مطمئن هستید؟"
                   okText="حذف"
                   cancelText="انصراف"
-                  onConfirm={() => handleDelete(record.key)}
+                  onConfirm={() => handleDelete(record.id)}
                 >
                   <Button size="small" danger>حذف</Button>
                 </Popconfirm>
@@ -223,7 +251,11 @@ export default function Users() {
         onCancel={() => setCreateOpen(false)}
         onOk={handleCreate}
       >
-        <Form form={createForm} layout="vertical">
+        <Form
+          form={createForm}
+          layout="vertical"
+          onValuesChange={(_, all) => setSelectedCreateForms((all as any)?.forms || [])}
+        >
           <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}> 
             <Input placeholder="manager_branch_X" />
           </Form.Item>
@@ -259,7 +291,11 @@ export default function Users() {
         onCancel={() => { setEditOpen(false); setEditingUser(null); }}
         onOk={handleEdit}
       >
-        <Form form={editForm} layout="vertical">
+        <Form
+          form={editForm}
+          layout="vertical"
+          onValuesChange={(_, all) => setSelectedEditForms((all as any)?.forms || [])}
+        >
           <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}> 
             <Input />
           </Form.Item>

@@ -1,0 +1,26 @@
+import { request } from './client';
+
+export type FormField = {
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select' | 'checkbox';
+  required?: boolean;
+  options?: string[];
+};
+
+export type FormRecord = {
+  id: string;
+  name: string;
+  fields: FormField[];
+};
+
+type ServerForm = Omit<FormRecord, 'id'> & { _id: string };
+
+function mapForm(f: ServerForm): FormRecord {
+  const { _id, ...rest } = f;
+  return { id: _id, ...rest };
+}
+
+export async function listForms(): Promise<FormRecord[]> {
+  const data = await request<ServerForm[]>('/forms');
+  return data.map(mapForm);
+}

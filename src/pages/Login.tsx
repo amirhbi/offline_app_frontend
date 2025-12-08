@@ -16,7 +16,7 @@ export default function Login() {
     if (ok) {
       navigate(from, { replace: true });
     } else {
-      setError('نام کاربری یا رمز عبور نادرست است. admin / admin123 را امتحان کنید');
+      setError('نام کاربری یا رمز عبور نادرست است');
     }
   };
 
@@ -30,10 +30,10 @@ export default function Login() {
         {error && <Alert type="error" message={error} className="mb-4" />}
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item name="username" label="نام کاربری" rules={[{ required: true }]}> 
-            <Input placeholder="admin" />
+            <Input placeholder="نام کاربری" />
           </Form.Item>
           <Form.Item name="password" label="رمز عبور" rules={[{ required: true }]}> 
-            <Input.Password placeholder="admin123" />
+            <Input.Password placeholder="••••••••" />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" block>

@@ -1,20 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Table, Typography, Card, Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { createUser, deleteUser, listUsers, updateUser, UserRecord } from '../api/users';
 
-type L3UserRow = {
-  key: number;
-  username: string;
-  role: string;
-  forms: string[];
-  reports: string[];
-};
+type L3UserRow = UserRecord;
 
 export default function L3Users() {
-  const [users, setUsers] = useState<L3UserRow[]>([
-    { key: 1, username: 'اپراتور_اعلام_۱', role: 'L3', forms: ['فرم ۲'], reports: ['گزارش فرم ۲'] },
-    { key: 2, username: 'اپراتور_اطفاء_۱', role: 'L3', forms: ['فرم ۳'], reports: ['گزارش فرم ۳'] },
-  ]);
+  const [users, setUsers] = useState<L3UserRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -25,16 +18,33 @@ export default function L3Users() {
   const formOptions = useMemo(() => ['فرم ۲', 'فرم ۳', 'فرم ۴'], []);
   const reportOptions = useMemo(() => ['گزارش فرم ۲', 'گزارش فرم ۳', 'گزارش فرم ۴'], []);
 
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await listUsers('L3');
+        setUsers(data);
+      } catch (err: any) {
+        message.error(err?.message || 'خطا در دریافت کاربران L3');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   const handleCreate = async () => {
     try {
       const values = await createForm.validateFields();
-      const nextKey = (users.reduce((m, u) => Math.max(m, u.key), 0) || 0) + 1;
-      const newUser: L3UserRow = { key: nextKey, username: values.username, role: 'L3', forms: values.forms || [], reports: values.reports || [] };
-      setUsers((prev) => [...prev, newUser]);
+      const payload = { username: values.username, role: 'L3' as const, forms: values.forms || [], reports: values.reports || [], logs: [] };
+      const created = await createUser(payload);
+      setUsers((prev) => [created, ...prev]);
       setCreateOpen(false);
       createForm.resetFields();
       message.success('کاربر L3 جدید ایجاد شد');
-    } catch (err) { /* ignore */ }
+    } catch (err: any) {
+      message.error(err?.message || 'ایجاد کاربر L3 ناموفق بود');
+    }
   };
 
   const startEdit = (record: L3UserRow) => {
@@ -47,16 +57,24 @@ export default function L3Users() {
     try {
       const values = await editForm.validateFields();
       if (!editingUser) return;
-      setUsers((prev) => prev.map((u) => (u.key === editingUser.key ? { ...u, username: values.username, forms: values.forms || [], reports: values.reports || [] } : u)));
+      const updated = await updateUser(editingUser.id, { username: values.username, forms: values.forms || [], reports: values.reports || [] });
+      setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updated : u)));
       setEditOpen(false);
       setEditingUser(null);
       message.success('ویرایش کاربر L3 انجام شد');
-    } catch (err) { /* ignore */ }
+    } catch (err: any) {
+      message.error(err?.message || 'ویرایش کاربر L3 ناموفق بود');
+    }
   };
 
-  const handleDelete = (key: number) => {
-    setUsers((prev) => prev.filter((u) => u.key !== key));
-    message.success('کاربر L3 حذف شد');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteUser(id);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      message.success('کاربر L3 حذف شد');
+    } catch (err: any) {
+      message.error(err?.message || 'حذف کاربر L3 ناموفق بود');
+    }
   };
 
   return (
@@ -72,7 +90,8 @@ export default function L3Users() {
       </Typography.Paragraph>
       <Table<L3UserRow>
         dataSource={users}
-        rowKey="key"
+        rowKey="id"
+        loading={loading}
         pagination={false}
         columns={[
           { title: 'نام کاربری L3', dataIndex: 'username' },
@@ -109,7 +128,7 @@ export default function L3Users() {
                   description="آیا از حذف این کاربر مطمئن هستید؟"
                   okText="حذف"
                   cancelText="انصراف"
-                  onConfirm={() => handleDelete(record.key)}
+                  onConfirm={() => handleDelete(record.id)}
                 >
                   <Button size="small" danger>حذف</Button>
                 </Popconfirm>

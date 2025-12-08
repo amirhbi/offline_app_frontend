@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { login } from '../api/auth';
 
 type AuthContextType = {
   isAuthenticated: boolean;
@@ -21,12 +22,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthContextType>(() => ({
     isAuthenticated: !!token,
     signIn: async (username, password) => {
-      // Demo auth: use admin / admin123
-      if (username === 'admin' && password === 'admin123') {
-        setToken('demo-token');
+      try {
+        const res = await login({ username, password });
+        setToken(res.token);
         return true;
+      } catch {
+        return false;
       }
-      return false;
     },
     signOut: () => setToken(null),
   }), [token]);
