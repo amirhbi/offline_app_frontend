@@ -7,10 +7,16 @@ export type FormField = {
   options?: string[];
 };
 
+export type FormCategory = {
+  name: string;
+  fields: FormField[];
+};
+
 export type FormRecord = {
   id: string;
   name: string;
   fields: FormField[];
+  categories?: FormCategory[];
 };
 
 type ServerForm = Omit<FormRecord, 'id'> & { _id: string };
