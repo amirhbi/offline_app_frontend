@@ -9,6 +9,7 @@ export type UserRecord = {
   forms: string[];
   reports: string[];
   logs: string[];
+  backupAllowed?: boolean;
 };
 
 type ServerUser = Omit<UserRecord, 'id'> & { _id: string };

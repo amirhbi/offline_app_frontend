@@ -21,7 +21,7 @@ import {
   FileZipOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import { listUsers, UserRecord } from "../api/users";
+import { listUsers, updateUser, UserRecord } from "../api/users";
 
 export default function Backup() {
   const [form] = Form.useForm();
@@ -32,12 +32,22 @@ export default function Backup() {
     { value: string; label: string }[]
   >([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [permUsers, setPermUsers] = useState<UserRecord[]>([]);
+  const [permUsersLoading, setPermUsersLoading] = useState(false);
 
   const onSave = (values: any) => {
     message.success("تنظیمات زمان‌بندی ذخیره شد");
   };
-  const onSavePerm = (values: any) => {
-    message.success("دسترسی پشتیبان‌گیری برای کاربر به‌روز شد");
+  const onSavePerm = async (values: any) => {
+    try {
+      const userId: string = values.user;
+      await updateUser(userId, { backupAllowed: true });
+      message.success("دسترسی پشتیبان‌گیری برای کاربر فعال شد");
+      permForm.resetFields();
+      await loadPermUsers();
+    } catch (e: any) {
+      message.error(e?.message || "خطا در ذخیره دسترسی");
+    }
   };
 
   type BackupRow = {
@@ -91,6 +101,7 @@ export default function Backup() {
   useEffect(() => {
     loadBackups();
     loadUsers();
+    loadPermUsers();
   }, []);
 
   const loadUsers = async () => {
@@ -109,6 +120,18 @@ export default function Backup() {
       setUsersOptions([]);
     } finally {
       setUsersLoading(false);
+    }
+  };
+
+  const loadPermUsers = async () => {
+    setPermUsersLoading(true);
+    try {
+      const users: UserRecord[] = await listUsers();
+      setPermUsers(users.filter((u) => !!u.backupAllowed));
+    } catch (e) {
+      setPermUsers([]);
+    } finally {
+      setPermUsersLoading(false);
     }
   };
 
@@ -329,6 +352,7 @@ export default function Backup() {
             key: "permissions",
             label: "مدیریت دسترسی",
             children: (
+              <>
               <Form
                 form={permForm}
                 layout="vertical"
@@ -361,6 +385,28 @@ export default function Backup() {
                   </Space>
                 </Form.Item>
               </Form>
+              <div className="mt-6">
+                <div className="flex justify-between items-center mb-2">
+                  <Typography.Title level={5}>کاربران دارای دسترسی پشتیبان‌گیری</Typography.Title>
+                  <Button onClick={loadPermUsers}>بازخوانی</Button>
+                </div>
+                <Table
+                  rowKey="id"
+                  dataSource={permUsers}
+                  loading={permUsersLoading}
+                  pagination={{ pageSize: 8 }}
+                  columns={[
+                    { title: "کاربر", key: "user", render: (_: any, r: UserRecord) => r.nickname?.trim() ? r.nickname : r.username },
+                    { title: "نقش", dataIndex: "role", key: "role", render: (role: string) => (role === 'admin' ? 'ادمین' : 'L3') },
+                    { title: "عملیات", key: "actions", render: (_: any, r: UserRecord) => (
+                      <Popconfirm title="حذف دسترسی این کاربر؟" onConfirm={async () => { try { await updateUser(r.id, { backupAllowed: false }); message.success("دسترسی حذف شد"); await loadPermUsers(); } catch (e: any) { message.error(e?.message || "خطا"); } } }>
+                        <Button danger icon={<DeleteOutlined />}>حذف دسترسی</Button>
+                      </Popconfirm>
+                    ) },
+                  ] as any}
+                />
+              </div>
+              </>
             ),
           },
         ]}
