@@ -14,7 +14,7 @@ export default function Backup() {
   return (
     <Card className="border border-red-300">
       <Typography.Title level={4} className="text-red-600">
-        تب ۵: پشتیبان‌گیری
+          پشتیبان‌گیری
       </Typography.Title>
 
       <Tabs
@@ -81,7 +81,7 @@ export default function Backup() {
 
                         {freq === 'monthly' && (
                           <Form.Item name="monthday" label="روز ماه" rules={[{ required: true, message: 'روز ماه را وارد کنید' }]}> 
-                            <InputNumber min={1} max={31} style={{ width: '100%' }} placeholder="۱ تا ۳۱" />
+                            <InputNumber min={1} max={29} style={{ width: '100%' }} placeholder="۱ تا ۲۹" />
                           </Form.Item>
                         )}
 
