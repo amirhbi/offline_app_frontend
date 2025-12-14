@@ -13,6 +13,7 @@ import {
   Popconfirm,
   message,
 } from 'antd';
+import { useNavigate } from 'react-router-dom';
 
 type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox';
 
@@ -39,6 +40,7 @@ interface FormDefinition {
 const API_BASE = '/api';
 
 export default function Structure() {
+  const navigate = useNavigate();
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingForm, setEditingForm] = useState<FormDefinition | null>(null);
@@ -190,6 +192,7 @@ export default function Structure() {
       key: 'actions',
       render: (_: any, rec: FormDefinition) => (
         <Space>
+          <Button onClick={() => navigate(`/structure/data/${rec.id}`)}>نمایش داده ها</Button>
           <Button onClick={() => openEdit(rec)}>ویرایش</Button>
           <Popconfirm title="حذف فرم؟" onConfirm={() => deleteForm(rec.id)}>
             <Button danger>حذف</Button>
@@ -203,7 +206,7 @@ export default function Structure() {
     <Card className="border border-red-300">
       <div className="flex justify-between items-center mb-2">
       <Typography.Title level={4} className="text-red-600">
-        مدیریت ساختار سامانه
+        مدیریت  داده ها
       </Typography.Title>
 
       <Space className="mb-3">

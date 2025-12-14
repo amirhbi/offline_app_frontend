@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Login, Dashboard, Users, Structure, Reports, Backup, Logs, L2Dashboard, L3Users, L2Data, L2Reports, L2Export, L3Dashboard, L3DataEntry, L3Export } from './pages';
+import { Login, Dashboard, Users, Structure, Reports, Backup, Logs, L2Dashboard, L3Users, L2Data, L2Reports, L2Export, L3Dashboard, L3DataEntry, L3Export, FormData } from './pages';
 import AdminLayout from './layouts/AdminLayout';
 import L2Layout from './layouts/L2Layout';
 import L3Layout from './layouts/L3Layout';
@@ -23,6 +23,7 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="users" element={<Users />} />
           <Route path="structure" element={<Structure />} />
+          <Route path="structure/data/:formId" element={<FormData />} />
           <Route path="reports" element={<Reports />} />
           <Route path="backup" element={<Backup />} />
           <Route path="logs" element={<Logs />} />

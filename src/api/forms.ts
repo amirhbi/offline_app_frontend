@@ -30,3 +30,8 @@ export async function listForms(): Promise<FormRecord[]> {
   const data = await request<ServerForm[]>('/forms');
   return data.map(mapForm);
 }
+
+export async function getForm(id: string): Promise<FormRecord> {
+  const data = await request<ServerForm>(`/forms/${id}`);
+  return mapForm(data);
+}
