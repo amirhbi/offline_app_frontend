@@ -18,3 +18,8 @@ export async function listFormEntries(formId: string): Promise<FormEntryRecord[]
   const data = await request<ServerEntry[]>(`/forms/${formId}/entries`);
   return data.map(mapEntry);
 }
+
+export async function createFormEntry(formId: string, payload: { data: Record<string, any> }): Promise<FormEntryRecord> {
+  const data = await request<ServerEntry>(`/forms/${formId}/entries`, { method: 'POST', body: payload });
+  return mapEntry(data);
+}
