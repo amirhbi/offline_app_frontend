@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { Card, Typography, Table, Space, Button, message, Input, Select, DatePicker, Checkbox } from 'antd';
+import { Card, Typography, Table, Space, Button, message, Input, Select, DatePicker, Checkbox, Modal } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getForm, FormRecord, FormField } from '../api/forms';
-import { listFormEntries, FormEntryRecord, createFormEntry } from '../api/formEntries';
+import { listFormEntries, FormEntryRecord, createFormEntry, updateFormEntry, deleteFormEntry } from '../api/formEntries';
 
 export default function FormData() {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ export default function FormData() {
   const [loading, setLoading] = useState(false);
   const [inlineAdd, setInlineAdd] = useState(false);
   const [inlineValues, setInlineValues] = useState<Record<string, any>>({});
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
 
   const load = async () => {
     if (!formId) return;
@@ -115,7 +116,54 @@ export default function FormData() {
       }
     }
     setInlineValues(initial);
+    setEditingEntryId(null);
     setInlineAdd(true);
+  };
+
+  const handleEdit = (row: any) => {
+    if (!formDef) return;
+    if (inlineAdd) {
+      message.warning('در حال افزودن/ویرایش رکورد هستید');
+      return;
+    }
+    const initial: Record<string, any> = {};
+    for (const f of ((formDef.fields ?? []) as FormField[])) {
+      const v = row?.data?.[f.label];
+      if (f.type === 'date' && v) initial[f.label] = dayjs(v);
+      else if (f.type === 'checkbox') initial[f.label] = !!v;
+      else initial[f.label] = v ?? '';
+    }
+    for (const c of (formDef.categories || [])) {
+      for (const f of ((c.fields ?? []) as FormField[])) {
+        const key = `${c.name} - ${f.label}`;
+        const v = row?.data?.[key];
+        if (f.type === 'date' && v) initial[key] = dayjs(v);
+        else if (f.type === 'checkbox') initial[key] = !!v;
+        else initial[key] = v ?? '';
+      }
+    }
+    setInlineValues(initial);
+    setEditingEntryId(row.id);
+    setInlineAdd(true);
+  };
+
+  const handleDelete = (row: any) => {
+    Modal.confirm({
+      title: 'حذف رکورد',
+      content: 'آیا از حذف این رکورد مطمئن هستید؟',
+      okText: 'حذف',
+      okType: 'danger',
+      cancelText: 'انصراف',
+      onOk: async () => {
+        try {
+          await deleteFormEntry(formId as string, row.id);
+          message.success('رکورد حذف شد');
+          load();
+        } catch (e: any) {
+          message.error(e?.message || 'حذف رکورد ناموفق بود');
+        }
+      },
+    });
   };
 
   const handleInlineSave = async () => {
@@ -151,9 +199,15 @@ export default function FormData() {
           }
         }
       }
-      await createFormEntry(formId, { data });
-      message.success('رکورد جدید ثبت شد');
+      if (editingEntryId) {
+        await updateFormEntry(formId, editingEntryId, { data });
+        message.success('ویرایش رکورد انجام شد');
+      } else {
+        await createFormEntry(formId, { data });
+        message.success('رکورد جدید ثبت شد');
+      }
       setInlineAdd(false);
+      setEditingEntryId(null);
       setInlineValues({});
       load();
     } catch (e: any) {
@@ -171,10 +225,14 @@ export default function FormData() {
       render: (_: any, row: any) => row.id === '__new__' ? (
         <Space>
           <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
-          <Button onClick={() => { setInlineAdd(false); setInlineValues({}); }}>لغو</Button>
+          <Button onClick={() => { setInlineAdd(false); setInlineValues({}); setEditingEntryId(null); }}>لغو</Button>
         </Space>
       ) : (
-        <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+        <Space>
+          <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+          <Button onClick={() => handleEdit(row)}>ویرایش</Button>
+          <Button danger onClick={() => handleDelete(row)}>حذف</Button>
+        </Space>
       ),
     });
     // Base fields
@@ -214,12 +272,17 @@ export default function FormData() {
   const baseColumns = useMemo(() => {
     const cols: any[] = [];
     if (!formDef) return cols;
-    // Actions: duplicate only
+    // Actions: duplicate, edit, delete
     cols.push({
       title: 'عملیات',
       key: '__actions',
+      fixed: 'end',
       render: (_: any, row: any) => (
-        <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+        <Space>
+          <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+          <Button onClick={() => handleEdit(row)}>ویرایش</Button>
+          <Button danger onClick={() => handleDelete(row)}>حذف</Button>
+        </Space>
       ),
     });
     // Base fields only
@@ -240,12 +303,16 @@ export default function FormData() {
     for (const c of (formDef.categories || [])) {
       if (!c.fields || c.fields.length === 0) continue;
       const cols: any[] = [];
-      // Actions: duplicate only
+      // Actions: duplicate, edit, delete
       cols.push({
         title: 'عملیات',
         key: '__actions',
         render: (_: any, row: any) => (
-          <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+          <Space>
+            <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+            <Button onClick={() => handleEdit(row)}>ویرایش</Button>
+            <Button danger onClick={() => handleDelete(row)}>حذف</Button>
+          </Space>
         ),
       });
       const keys: string[] = [];
@@ -279,7 +346,7 @@ export default function FormData() {
       render: (_: any, row: any) => row.id === '__new__' ? (
         <Space>
           <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
-          <Button onClick={() => { setInlineAdd(false); setInlineValues({}); }}>لغو</Button>
+          <Button onClick={() => { setInlineAdd(false); setInlineValues({}); setEditingEntryId(null); }}>لغو</Button>
         </Space>
       ) : null,
     });
@@ -306,7 +373,7 @@ export default function FormData() {
         render: (_: any, row: any) => row.id === '__new__' ? (
           <Space>
             <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
-            <Button onClick={() => { setInlineAdd(false); setInlineValues({}); }}>لغو</Button>
+            <Button onClick={() => { setInlineAdd(false); setInlineValues({}); setEditingEntryId(null); }}>لغو</Button>
           </Space>
         ) : null,
       });
@@ -366,6 +433,7 @@ export default function FormData() {
 
   const startInlineAdd = () => {
     if (!formDef) return;
+    setEditingEntryId(null);
     const initial: Record<string, any> = {};
     for (const f of ((formDef.fields ?? []) as FormField[])) {
       if (f.type === 'checkbox') initial[f.label] = undefined;
@@ -406,7 +474,7 @@ export default function FormData() {
         <>
           {(formDef?.fields && formDef.fields.length > 0) && (
             <>
-              <Typography.Title level={5} className="!mb-2">افزودن رکورد جدید - فیلدهای اصلی</Typography.Title>
+              <Typography.Title level={5} className="!mb-2">{editingEntryId ? 'ویرایش رکورد - فیلدهای اصلی' : 'افزودن رکورد جدید - فیلدهای اصلی'}</Typography.Title>
               <Table
                 rowKey="id"
                 dataSource={[{ id: '__new__', formId: formId as string, data: inlineValues }] as any}
@@ -419,7 +487,7 @@ export default function FormData() {
           )}
           {addCategoryTables.map((cat) => (
             <div key={cat.name}>
-              <Typography.Title level={5} className="!mt-4 !mb-2">افزودن رکورد جدید - {cat.name}</Typography.Title>
+              <Typography.Title level={5} className="!mt-4 !mb-2">{editingEntryId ? `ویرایش رکورد - ${cat.name}` : `افزودن رکورد جدید - ${cat.name}`}</Typography.Title>
               <Table
                 rowKey="id"
                 dataSource={[{ id: '__new__', formId: formId as string, data: inlineValues }] as any}
