@@ -8,6 +8,7 @@ export default defineConfig({
       '/api': {
         target: 'https://off.liara.run',
         changeOrigin: true,
+        secure: false
       },
     },
   },
