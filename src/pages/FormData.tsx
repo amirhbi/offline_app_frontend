@@ -40,6 +40,32 @@ export default function FormData() {
     return meta;
   }, [formDef]);
 
+  // Helper: determine if a value should be considered meaningful/present for display/save
+  const hasMeaningfulValue = (type: FormField['type'], v: any): boolean => {
+    if (v === null || v === undefined) return false;
+    switch (type) {
+      case 'text':
+      case 'select':
+        return String(v).trim() !== '';
+      case 'number': {
+        if (typeof v === 'number') return !isNaN(v);
+        if (typeof v === 'string') {
+          const s = v.trim();
+          if (s === '') return false;
+          const n = Number(s);
+          return !isNaN(n);
+        }
+        return false;
+      }
+      case 'date':
+        return !!v; // Dayjs instance
+      case 'checkbox':
+        return typeof v === 'boolean';
+      default:
+        return String(v).trim() !== '';
+    }
+  };
+
   // Inline cell renderer and save handler must be defined before columns
   const renderInlineCell = (key: string) => {
     const meta = fieldMeta[key];
@@ -98,17 +124,31 @@ export default function FormData() {
       const data: Record<string, any> = {};
       for (const f of formDef.fields || []) {
         const v = inlineValues[f.label];
-        if (f.type === 'date' && v) data[f.label] = v.format('YYYY-MM-DD');
-        else if (f.type === 'number' && v !== undefined && v !== null && v !== '') data[f.label] = Number(v);
-        else data[f.label] = v ?? '';
+        if (!hasMeaningfulValue(f.type, v)) continue;
+        if (f.type === 'date') data[f.label] = v.format('YYYY-MM-DD');
+        else if (f.type === 'number') {
+          const n = typeof v === 'number' ? v : Number(v);
+          if (!isNaN(n)) data[f.label] = n;
+        } else if (f.type === 'checkbox') {
+          data[f.label] = v as boolean;
+        } else {
+          data[f.label] = String(v).trim();
+        }
       }
       for (const c of formDef.categories || []) {
         for (const f of c.fields || []) {
           const key = `${c.name} - ${f.label}`;
           const v = inlineValues[key];
-          if (f.type === 'date' && v) data[key] = v.format('YYYY-MM-DD');
-          else if (f.type === 'number' && v !== undefined && v !== null && v !== '') data[key] = Number(v);
-          else data[key] = v ?? '';
+          if (!hasMeaningfulValue(f.type, v)) continue;
+          if (f.type === 'date') data[key] = v.format('YYYY-MM-DD');
+          else if (f.type === 'number') {
+            const n = typeof v === 'number' ? v : Number(v);
+            if (!isNaN(n)) data[key] = n;
+          } else if (f.type === 'checkbox') {
+            data[key] = v as boolean;
+          } else {
+            data[key] = String(v).trim();
+          }
         }
       }
       await createFormEntry(formId, { data });
@@ -195,7 +235,7 @@ export default function FormData() {
   }, [formDef]);
 
   const categoryTables = useMemo(() => {
-    const tables: { name: string; columns: any[] }[] = [];
+    const tables: { name: string; columns: any[]; rows: FormEntryRecord[] }[] = [];
     if (!formDef) return tables;
     for (const c of (formDef.categories || [])) {
       if (!c.fields || c.fields.length === 0) continue;
@@ -208,8 +248,10 @@ export default function FormData() {
           <Button onClick={() => handleDuplicate(row)}>کپی</Button>
         ),
       });
+      const keys: string[] = [];
       for (const f of (c.fields || [])) {
         const key = `${c.name} - ${f.label}`;
+        keys.push(key);
         cols.push({
           title: f.label,
           dataIndex: ['data', key],
@@ -217,10 +259,81 @@ export default function FormData() {
         });
       }
       cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
+      const rows = entries.filter((e) => keys.some((k) => {
+        const meta = fieldMeta[k];
+        return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
+      }));
+      tables.push({ name: c.name, columns: cols.map((c2) => ({ ...c2, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) })), rows });
+    }
+    return tables;
+  }, [formDef, entries, fieldMeta]);
+
+  // Inline add columns: split into base and per-category rows
+  const addBaseColumns = useMemo(() => {
+    const cols: any[] = [];
+    if (!formDef) return cols;
+    // Actions
+    cols.push({
+      title: 'عملیات',
+      key: '__actions',
+      render: (_: any, row: any) => row.id === '__new__' ? (
+        <Space>
+          <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
+          <Button onClick={() => { setInlineAdd(false); setInlineValues({}); }}>لغو</Button>
+        </Space>
+      ) : null,
+    });
+    for (const f of (formDef.fields || [])) {
+      cols.push({
+        title: f.label,
+        dataIndex: ['data', f.label],
+        key: f.label,
+        render: (_val: any, row: any) => row.id === '__new__' ? renderInlineCell(f.label) : _val,
+      });
+    }
+    return cols.map((c) => ({ ...c, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) }));
+  }, [formDef, inlineValues]);
+
+  const addCategoryTables = useMemo(() => {
+    const tables: { name: string; columns: any[] }[] = [];
+    if (!formDef) return tables;
+    for (const c of (formDef.categories || [])) {
+      if (!c.fields || c.fields.length === 0) continue;
+      const cols: any[] = [];
+      cols.push({
+        title: 'عملیات',
+        key: '__actions',
+        render: (_: any, row: any) => row.id === '__new__' ? (
+          <Space>
+            <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
+            <Button onClick={() => { setInlineAdd(false); setInlineValues({}); }}>لغو</Button>
+          </Space>
+        ) : null,
+      });
+      for (const f of (c.fields || [])) {
+        const key = `${c.name} - ${f.label}`;
+        cols.push({
+          title: f.label,
+          dataIndex: ['data', key],
+          key,
+          render: (_val: any, row: any) => row.id === '__new__' ? renderInlineCell(key) : _val,
+        });
+      }
       tables.push({ name: c.name, columns: cols.map((c2) => ({ ...c2, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) })) });
     }
     return tables;
-  }, [formDef]);
+  }, [formDef, inlineValues]);
+
+  // Filter entries shown in the base table to only those having meaningful values in base fields
+  const filteredBaseEntries = useMemo(() => {
+    if (!formDef) return entries;
+    const keys = (formDef.fields || []).map((f) => f.label);
+    if (!keys.length) return [];
+    return entries.filter((e) => keys.some((k) => {
+      const meta = fieldMeta[k];
+      return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
+    }));
+  }, [entries, formDef, fieldMeta]);
 
   const exportCsv = () => {
     if (!formDef) return;
@@ -254,9 +367,18 @@ export default function FormData() {
   const startInlineAdd = () => {
     if (!formDef) return;
     const initial: Record<string, any> = {};
-    for (const f of ((formDef.fields ?? []) as FormField[])) initial[f.label] = f.type === 'checkbox' ? false : '';
+    for (const f of ((formDef.fields ?? []) as FormField[])) {
+      if (f.type === 'checkbox') initial[f.label] = undefined;
+      else if (f.type === 'date') initial[f.label] = undefined;
+      else initial[f.label] = '';
+    }
     for (const c of formDef.categories || []) {
-      for (const f of ((c.fields ?? []) as FormField[])) initial[`${c.name} - ${f.label}`] = f.type === 'checkbox' ? false : '';
+      for (const f of ((c.fields ?? []) as FormField[])) {
+        const key = `${c.name} - ${f.label}`;
+        if (f.type === 'checkbox') initial[key] = undefined;
+        else if (f.type === 'date') initial[key] = undefined;
+        else initial[key] = '';
+      }
     }
     setInlineValues(initial);
     setInlineAdd(true);
@@ -282,15 +404,32 @@ export default function FormData() {
 
       {inlineAdd && (
         <>
-          <Typography.Title level={5} className="!mb-2">افزودن رکورد جدید</Typography.Title>
-          <Table
-            rowKey="id"
-            dataSource={[{ id: '__new__', formId: formId as string, data: inlineValues }] as any}
-            columns={allColumns as any}
-            loading={loading}
-            pagination={false}
-            scroll={{ x: 'max-content' }}
-          />
+          {(formDef?.fields && formDef.fields.length > 0) && (
+            <>
+              <Typography.Title level={5} className="!mb-2">افزودن رکورد جدید - فیلدهای اصلی</Typography.Title>
+              <Table
+                rowKey="id"
+                dataSource={[{ id: '__new__', formId: formId as string, data: inlineValues }] as any}
+                columns={addBaseColumns as any}
+                loading={loading}
+                pagination={false}
+                scroll={{ x: 'max-content' }}
+              />
+            </>
+          )}
+          {addCategoryTables.map((cat) => (
+            <div key={cat.name}>
+              <Typography.Title level={5} className="!mt-4 !mb-2">افزودن رکورد جدید - {cat.name}</Typography.Title>
+              <Table
+                rowKey="id"
+                dataSource={[{ id: '__new__', formId: formId as string, data: inlineValues }] as any}
+                columns={cat.columns as any}
+                loading={loading}
+                pagination={false}
+                scroll={{ x: 'max-content' }}
+              />
+            </div>
+          ))}
         </>
       )}
 
@@ -300,7 +439,7 @@ export default function FormData() {
           <Typography.Title level={5} className="!mt-6 !mb-2">فیلدهای اصلی</Typography.Title>
           <Table
             rowKey="id"
-            dataSource={entries}
+            dataSource={filteredBaseEntries}
             columns={baseColumns as any}
             loading={loading}
             pagination={{ pageSize: 12 }}
@@ -315,7 +454,7 @@ export default function FormData() {
           <Typography.Title level={5} className="!mt-6 !mb-2">{cat.name}</Typography.Title>
           <Table
             rowKey="id"
-            dataSource={entries}
+            dataSource={cat.rows}
             columns={cat.columns as any}
             loading={loading}
             pagination={{ pageSize: 12 }}
