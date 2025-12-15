@@ -76,7 +76,7 @@ export default function FormData() {
       const v = row?.data?.[f.label];
       if (f.type === 'date' && v) initial[f.label] = dayjs(v);
       else if (f.type === 'checkbox') initial[f.label] = !!v;
-      else initial[f.label] = v ?? (f.type === 'checkbox' ? false : '');
+      else initial[f.label] = v ?? '';
     }
     // Category fields
     for (const c of (formDef.categories || [])) {
@@ -85,7 +85,7 @@ export default function FormData() {
         const v = row?.data?.[key];
         if (f.type === 'date' && v) initial[key] = dayjs(v);
         else if (f.type === 'checkbox') initial[key] = !!v;
-        else initial[key] = v ?? (f.type === 'checkbox' ? false : '');
+        else initial[key] = v ?? '';
       }
     }
     setInlineValues(initial);
@@ -121,7 +121,7 @@ export default function FormData() {
     }
   };
 
-  const columns = useMemo(() => {
+  const allColumns = useMemo(() => {
     const cols: any[] = [];
     if (!formDef) return cols;
     // Actions column for inline add row
@@ -171,10 +171,61 @@ export default function FormData() {
     }));
   }, [formDef, inlineValues]);
 
+  const baseColumns = useMemo(() => {
+    const cols: any[] = [];
+    if (!formDef) return cols;
+    // Actions: duplicate only
+    cols.push({
+      title: 'عملیات',
+      key: '__actions',
+      render: (_: any, row: any) => (
+        <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+      ),
+    });
+    // Base fields only
+    for (const f of (formDef.fields || [])) {
+      cols.push({
+        title: f.label,
+        dataIndex: ['data', f.label],
+        key: f.label,
+      });
+    }
+    cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
+    return cols.map((c) => ({ ...c, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) }));
+  }, [formDef]);
+
+  const categoryTables = useMemo(() => {
+    const tables: { name: string; columns: any[] }[] = [];
+    if (!formDef) return tables;
+    for (const c of (formDef.categories || [])) {
+      if (!c.fields || c.fields.length === 0) continue;
+      const cols: any[] = [];
+      // Actions: duplicate only
+      cols.push({
+        title: 'عملیات',
+        key: '__actions',
+        render: (_: any, row: any) => (
+          <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+        ),
+      });
+      for (const f of (c.fields || [])) {
+        const key = `${c.name} - ${f.label}`;
+        cols.push({
+          title: f.label,
+          dataIndex: ['data', key],
+          key,
+        });
+      }
+      cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
+      tables.push({ name: c.name, columns: cols.map((c2) => ({ ...c2, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) })) });
+    }
+    return tables;
+  }, [formDef]);
+
   const exportCsv = () => {
     if (!formDef) return;
-    const headers = columns.map((c: any) => c.title);
-    const rows = entries.map((e) => columns.map((c: any) => {
+    const headers = allColumns.map((c: any) => c.title);
+    const rows = entries.map((e) => allColumns.map((c: any) => {
       const path = c.dataIndex;
       if (Array.isArray(path)) {
         // nested access for ['data', key]
@@ -229,14 +280,49 @@ export default function FormData() {
 
       
 
-      <Table
-        rowKey="id"
-        dataSource={inlineAdd ? ([{ id: '__new__', formId: formId as string, data: inlineValues }] as any).concat(entries) : entries}
-        columns={columns as any}
-        loading={loading}
-        pagination={{ pageSize: 12 }}
-        scroll={{ x: 'max-content' }}
-      />
+      {inlineAdd && (
+        <>
+          <Typography.Title level={5} className="!mb-2">افزودن رکورد جدید</Typography.Title>
+          <Table
+            rowKey="id"
+            dataSource={[{ id: '__new__', formId: formId as string, data: inlineValues }] as any}
+            columns={allColumns as any}
+            loading={loading}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+          />
+        </>
+      )}
+
+      {/* Base fields table (only if there are base fields) */}
+      {(formDef?.fields && formDef.fields.length > 0) && (
+        <>
+          <Typography.Title level={5} className="!mt-6 !mb-2">فیلدهای اصلی</Typography.Title>
+          <Table
+            rowKey="id"
+            dataSource={entries}
+            columns={baseColumns as any}
+            loading={loading}
+            pagination={{ pageSize: 12 }}
+            scroll={{ x: 'max-content' }}
+          />
+        </>
+      )}
+
+      {/* Category tables */}
+      {categoryTables.map((cat) => (
+        <div key={cat.name}>
+          <Typography.Title level={5} className="!mt-6 !mb-2">{cat.name}</Typography.Title>
+          <Table
+            rowKey="id"
+            dataSource={entries}
+            columns={cat.columns as any}
+            loading={loading}
+            pagination={{ pageSize: 12 }}
+            scroll={{ x: 'max-content' }}
+          />
+        </div>
+      ))}
     </Card>
   );
 }
