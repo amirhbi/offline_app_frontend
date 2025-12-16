@@ -33,11 +33,11 @@ export default function FormData() {
   useEffect(() => { load(); }, [formId]);
 
   const fieldMeta = useMemo(() => {
-    const meta: Record<string, { type: FormRecord['fields'][number]['type']; options?: string[] }> = {};
+    const meta: Record<string, { type: FormRecord['fields'][number]['type']; options?: string[]; required?: boolean }> = {};
     if (!formDef) return meta;
-    for (const f of formDef.fields || []) meta[f.label] = { type: f.type, options: f.options };
+    for (const f of formDef.fields || []) meta[f.label] = { type: f.type, options: f.options, required: f.required };
     for (const c of formDef.categories || []) {
-      for (const f of c.fields || []) meta[`${c.name} - ${f.label}`] = { type: f.type, options: f.options };
+      for (const f of c.fields || []) meta[`${c.name} - ${f.label}`] = { type: f.type, options: f.options, required: f.required };
     }
     return meta;
   }, [formDef]);
@@ -122,6 +122,7 @@ export default function FormData() {
         const v = row?.data?.[key];
         if (f.type === 'date' && v) initial[key] = dayjs(v);
         else if (f.type === 'checkbox') initial[key] = !!v;
+        else if (f.type === 'select') initial[key] = v ?? undefined;
         else initial[key] = v ?? '';
       }
     }
@@ -141,6 +142,7 @@ export default function FormData() {
       const v = row?.data?.[f.label];
       if (f.type === 'date' && v) initial[f.label] = dayjs(v);
       else if (f.type === 'checkbox') initial[f.label] = !!v;
+      else if (f.type === 'select') initial[f.label] = v ?? undefined;
       else initial[f.label] = v ?? '';
     }
     for (const c of (formDef.categories || [])) {
@@ -149,6 +151,7 @@ export default function FormData() {
         const v = row?.data?.[key];
         if (f.type === 'date' && v) initial[key] = dayjs(v);
         else if (f.type === 'checkbox') initial[key] = !!v;
+        else if (f.type === 'select') initial[key] = v ?? undefined;
         else initial[key] = v ?? '';
       }
     }
@@ -179,6 +182,24 @@ export default function FormData() {
   const handleInlineSave = async () => {
     if (!formId || !formDef) return;
     try {
+      // Validate required fields before building payload
+      const missingRequired: string[] = [];
+      for (const f of (formDef.fields || [])) {
+        const v = inlineValues[f.label];
+        if (f.required && !hasMeaningfulValue(f.type, v)) missingRequired.push(f.label);
+      }
+      for (const c of (formDef.categories || [])) {
+        for (const f of (c.fields || [])) {
+          const key = `${c.name} - ${f.label}`;
+          const v = inlineValues[key];
+          if (f.required && !hasMeaningfulValue(f.type, v)) missingRequired.push(key);
+        }
+      }
+      if (missingRequired.length) {
+        message.error(`لطفاً فیلدهای ضروری را کامل کنید: ${missingRequired.join('، ')}`);
+        return;
+      }
+
       const data: Record<string, any> = {};
       for (const f of formDef.fields || []) {
         const v = inlineValues[f.label];
@@ -492,6 +513,7 @@ export default function FormData() {
     for (const f of ((formDef.fields ?? []) as FormField[])) {
       if (f.type === 'checkbox') initial[f.label] = undefined;
       else if (f.type === 'date') initial[f.label] = undefined;
+      else if (f.type === 'select') initial[f.label] = undefined;
       else initial[f.label] = '';
     }
     for (const c of formDef.categories || []) {
@@ -499,6 +521,7 @@ export default function FormData() {
         const key = `${c.name} - ${f.label}`;
         if (f.type === 'checkbox') initial[key] = undefined;
         else if (f.type === 'date') initial[key] = undefined;
+        else if (f.type === 'select') initial[key] = undefined;
         else initial[key] = '';
       }
     }
