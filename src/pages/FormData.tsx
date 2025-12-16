@@ -254,6 +254,7 @@ export default function FormData() {
       title: 'عملیات',
       key: '__actions',
       fixed: 'right',
+      align: 'left',
       render: (_: any, row: any) => row.id === '__new__' ? (
         <Space>
           <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
@@ -338,6 +339,7 @@ export default function FormData() {
       title: 'عملیات',
       key: '__actions',
       fixed: 'right',
+      align: 'left',
       render: (_: any, row: any) => (
         <Space>
           <Button onClick={() => handleDuplicate(row)}>کپی</Button>
@@ -387,6 +389,7 @@ export default function FormData() {
         title: 'عملیات',
         key: '__actions',
         fixed: 'right',
+        align: 'left',
         render: (_: any, row: any) => (
           <Space>
             <Button onClick={() => handleDuplicate(row)}>کپی</Button>
@@ -424,6 +427,7 @@ export default function FormData() {
       title: 'عملیات',
       key: '__actions',
       fixed: 'right',
+      align: 'left',
       render: (_: any, row: any) => row.id === '__new__' ? (
         <Space>
           <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
@@ -441,17 +445,7 @@ export default function FormData() {
     for (const c of (formDef.categories || [])) {
       if (!c.fields || c.fields.length === 0) continue;
       const cols: any[] = [];
-      cols.push({
-        title: 'عملیات',
-        key: '__actions',
-        fixed: 'right',
-        render: (_: any, row: any) => row.id === '__new__' ? (
-          <Space>
-            <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
-            <Button onClick={() => { setInlineAdd(false); setInlineValues({}); setEditingEntryId(null); }}>لغو</Button>
-          </Space>
-        ) : null,
-      });
+      
       for (const f of (c.fields || [])) {
         const key = `${c.name} - ${f.label}`;
         cols.push({
@@ -461,6 +455,19 @@ export default function FormData() {
           render: (_val: any, row: any) => row.id === '__new__' ? renderInlineCell(key) : _val,
         });
       }
+
+      cols.push({
+        title: 'عملیات',
+        key: '__actions',
+        fixed: 'right',
+        align: 'left',
+        render: (_: any, row: any) => row.id === '__new__' ? (
+          <Space>
+            <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
+            <Button onClick={() => { setInlineAdd(false); setInlineValues({}); setEditingEntryId(null); }}>لغو</Button>
+          </Space>
+        ) : null,
+      });
       tables.push({ name: c.name, columns: cols.map((c2) => ({ ...c2, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) })) });
     }
     return tables;
