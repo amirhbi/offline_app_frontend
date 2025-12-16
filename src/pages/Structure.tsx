@@ -190,6 +190,7 @@ export default function Structure() {
     {
       title: 'عملیات',
       key: 'actions',
+      fixed: 'right',
       render: (_: any, rec: FormDefinition) => (
         <Space>
           <Button onClick={() => navigate(`/structure/data/${rec.id}`)}>نمایش داده ها</Button>

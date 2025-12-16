@@ -222,6 +222,7 @@ export default function FormData() {
     cols.push({
       title: 'عملیات',
       key: '__actions',
+      fixed: 'right',
       render: (_: any, row: any) => row.id === '__new__' ? (
         <Space>
           <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
@@ -272,19 +273,14 @@ export default function FormData() {
   const baseColumns = useMemo(() => {
     const cols: any[] = [];
     if (!formDef) return cols;
-    // Actions: duplicate, edit, delete
+    
+    // Index column
     cols.push({
-      title: 'عملیات',
-      key: '__actions',
-      fixed: 'end',
-      render: (_: any, row: any) => (
-        <Space>
-          <Button onClick={() => handleDuplicate(row)}>کپی</Button>
-          <Button onClick={() => handleEdit(row)}>ویرایش</Button>
-          <Button danger onClick={() => handleDelete(row)}>حذف</Button>
-        </Space>
-      ),
+      title: 'ردیف',
+      key: 'index',
+      render: (_, row: any, index: number) => index + 1,
     });
+
     // Base fields only
     for (const f of (formDef.fields || [])) {
       cols.push({
@@ -294,6 +290,20 @@ export default function FormData() {
       });
     }
     cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
+    
+    // Actions: duplicate, edit, delete
+    cols.push({
+      title: 'عملیات',
+      key: '__actions',
+      fixed: 'right',
+      render: (_: any, row: any) => (
+        <Space>
+          <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+          <Button onClick={() => handleEdit(row)}>ویرایش</Button>
+          <Button danger onClick={() => handleDelete(row)}>حذف</Button>
+        </Space>
+      ),
+    });
     return cols.map((c) => ({ ...c, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) }));
   }, [formDef]);
 
@@ -303,18 +313,14 @@ export default function FormData() {
     for (const c of (formDef.categories || [])) {
       if (!c.fields || c.fields.length === 0) continue;
       const cols: any[] = [];
-      // Actions: duplicate, edit, delete
+      
+      // Index column
       cols.push({
-        title: 'عملیات',
-        key: '__actions',
-        render: (_: any, row: any) => (
-          <Space>
-            <Button onClick={() => handleDuplicate(row)}>کپی</Button>
-            <Button onClick={() => handleEdit(row)}>ویرایش</Button>
-            <Button danger onClick={() => handleDelete(row)}>حذف</Button>
-          </Space>
-        ),
+        title: 'ردیف',
+        key: 'index',
+        render: (_, row: any, index: number) => index + 1,
       });
+
       const keys: string[] = [];
       for (const f of (c.fields || [])) {
         const key = `${c.name} - ${f.label}`;
@@ -326,6 +332,21 @@ export default function FormData() {
         });
       }
       cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
+      
+      // Actions: duplicate, edit, delete
+      cols.push({
+        title: 'عملیات',
+        key: '__actions',
+        fixed: 'right',
+        render: (_: any, row: any) => (
+          <Space>
+            <Button onClick={() => handleDuplicate(row)}>کپی</Button>
+            <Button onClick={() => handleEdit(row)}>ویرایش</Button>
+            <Button danger onClick={() => handleDelete(row)}>حذف</Button>
+          </Space>
+        ),
+      });
+      
       const rows = entries.filter((e) => keys.some((k) => {
         const meta = fieldMeta[k];
         return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
@@ -339,17 +360,7 @@ export default function FormData() {
   const addBaseColumns = useMemo(() => {
     const cols: any[] = [];
     if (!formDef) return cols;
-    // Actions
-    cols.push({
-      title: 'عملیات',
-      key: '__actions',
-      render: (_: any, row: any) => row.id === '__new__' ? (
-        <Space>
-          <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
-          <Button onClick={() => { setInlineAdd(false); setInlineValues({}); setEditingEntryId(null); }}>لغو</Button>
-        </Space>
-      ) : null,
-    });
+    
     for (const f of (formDef.fields || [])) {
       cols.push({
         title: f.label,
@@ -358,6 +369,20 @@ export default function FormData() {
         render: (_val: any, row: any) => row.id === '__new__' ? renderInlineCell(f.label) : _val,
       });
     }
+
+    // Actions
+    cols.push({
+      title: 'عملیات',
+      key: '__actions',
+      fixed: 'right',
+      render: (_: any, row: any) => row.id === '__new__' ? (
+        <Space>
+          <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
+          <Button onClick={() => { setInlineAdd(false); setInlineValues({}); setEditingEntryId(null); }}>لغو</Button>
+        </Space>
+      ) : null,
+    });
+
     return cols.map((c) => ({ ...c, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) }));
   }, [formDef, inlineValues]);
 
@@ -370,6 +395,7 @@ export default function FormData() {
       cols.push({
         title: 'عملیات',
         key: '__actions',
+        fixed: 'right',
         render: (_: any, row: any) => row.id === '__new__' ? (
           <Space>
             <Button type="primary" onClick={handleInlineSave}>ثبت</Button>
