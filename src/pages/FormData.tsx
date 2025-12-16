@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { Card, Typography, Table, Space, Button, message, Input, Select, DatePicker, Checkbox, Modal } from 'antd';
+import { Card, Typography, Table, Space, Button, message, Input, Select, Checkbox, Modal } from 'antd';
+import { DatePicker as DatePickerJalali, JalaliLocaleListener } from "antd-jalali";
 import { useNavigate, useParams } from 'react-router-dom';
 import { getForm, FormRecord, FormField } from '../api/forms';
 import { listFormEntries, FormEntryRecord, createFormEntry, updateFormEntry, deleteFormEntry } from '../api/formEntries';
@@ -78,10 +79,19 @@ export default function FormData() {
       case 'number':
         return <Input type="number" value={value} onChange={(e) => setInlineValues((p) => ({ ...p, [key]: e.target.value }))} />;
       case 'date':
-        return <DatePicker style={{ width: '100%' }} value={value || null} onChange={(d) => setInlineValues((p) => ({ ...p, [key]: d }))} />;
+        return <><JalaliLocaleListener /><DatePickerJalali style={{ width: '100%' }} value={value || null} onChange={(d) => setInlineValues((p) => ({ ...p, [key]: d }))} /></>;
       case 'select':
         if (meta.options && meta.options.length) {
-          return <Select value={value} onChange={(v) => setInlineValues((p) => ({ ...p, [key]: v }))} options={meta.options.map((o) => ({ value: o, label: o }))} />;
+          return (
+            <Select
+              className='w-40'
+              value={value ?? undefined}
+              onChange={(v) => setInlineValues((p) => ({ ...p, [key]: v }))}
+              options={meta.options.map((o) => ({ value: o, label: o }))}
+              placeholder=" انتخاب کنید"
+              allowClear
+            />
+          );
         }
         return <Input value={value} onChange={(e) => setInlineValues((p) => ({ ...p, [key]: e.target.value }))} />;
       case 'checkbox':
@@ -244,7 +254,9 @@ export default function FormData() {
         key: f.label,
         render: (val: any, row: any) => row.id === '__new__'
           ? renderInlineCell(f.label)
-          : val,
+          : ((fieldMeta[f.label]?.type === 'checkbox')
+              ? (typeof val === 'boolean' ? (val ? '✓' : '✗') : '—')
+              : val),
       });
     }
     // Category fields (flattened with prefix)
@@ -257,7 +269,9 @@ export default function FormData() {
           key,
           render: (val: any, row: any) => row.id === '__new__'
             ? renderInlineCell(key)
-            : val,
+            : ((fieldMeta[key]?.type === 'checkbox')
+                ? (typeof val === 'boolean' ? (val ? '✓' : '✗') : '—')
+                : val),
         });
       }
     }
@@ -287,6 +301,13 @@ export default function FormData() {
         title: f.label,
         dataIndex: ['data', f.label],
         key: f.label,
+        render: (val: any) => {
+          const meta = fieldMeta[f.label];
+          if (meta?.type === 'checkbox') {
+            return typeof val === 'boolean' ? (val ? '✓' : '✗') : '—';
+          }
+          return val;
+        },
       });
     }
     cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
@@ -305,7 +326,7 @@ export default function FormData() {
       ),
     });
     return cols.map((c) => ({ ...c, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) }));
-  }, [formDef]);
+  }, [formDef, fieldMeta]);
 
   const categoryTables = useMemo(() => {
     const tables: { name: string; columns: any[]; rows: FormEntryRecord[] }[] = [];
@@ -329,6 +350,13 @@ export default function FormData() {
           title: f.label,
           dataIndex: ['data', key],
           key,
+          render: (val: any) => {
+            const meta = fieldMeta[key];
+            if (meta?.type === 'checkbox') {
+              return typeof val === 'boolean' ? (val ? '✓' : '✗') : '—';
+            }
+            return val;
+          },
         });
       }
       cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
