@@ -15,6 +15,7 @@ export default function FormData() {
   const [inlineAdd, setInlineAdd] = useState(false);
   const [inlineValues, setInlineValues] = useState<Record<string, any>>({});
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [inlineScope, setInlineScope] = useState<{ type: 'all' | 'base' | 'category'; category?: string }>({ type: 'all' });
 
   const load = async () => {
     if (!formId) return;
@@ -103,7 +104,7 @@ export default function FormData() {
     }
   };
 
-  const handleDuplicate = (row: any) => {
+  const handleDuplicate = (row: any, categoryName?: string) => {
     if (!formDef) return;
     if (inlineAdd) {
       message.warning('در حال افزودن رکورد جدید هستید');
@@ -131,9 +132,10 @@ export default function FormData() {
     setInlineValues(initial);
     setEditingEntryId(null);
     setInlineAdd(true);
+    setInlineScope(categoryName ? { type: 'category', category: categoryName } : { type: 'base' });
   };
 
-  const handleEdit = (row: any) => {
+  const handleEdit = (row: any, categoryName?: string) => {
     if (!formDef) return;
     if (inlineAdd) {
       message.warning('در حال افزودن/ویرایش رکورد هستید');
@@ -160,6 +162,7 @@ export default function FormData() {
     setInlineValues(initial);
     setEditingEntryId(row.id);
     setInlineAdd(true);
+    setInlineScope(categoryName ? { type: 'category', category: categoryName } : { type: 'base' });
   };
 
   const handleDelete = (row: any) => {
@@ -341,8 +344,8 @@ export default function FormData() {
       align: 'left',
       render: (_: any, row: any) => (
         <Space>
-          <Button onClick={() => handleDuplicate(row)}>کپی</Button>
-          <Button onClick={() => handleEdit(row)}>ویرایش</Button>
+          <Button onClick={() => handleDuplicate(row, undefined)}>کپی</Button>
+          <Button onClick={() => handleEdit(row, undefined)}>ویرایش</Button>
           <Button danger onClick={() => handleDelete(row)}>حذف</Button>
         </Space>
       ),
@@ -388,13 +391,13 @@ export default function FormData() {
         key: '__actions',
         fixed: 'right',
         align: 'left',
-        render: (_: any, row: any) => (
-          <Space>
-            <Button onClick={() => handleDuplicate(row)}>کپی</Button>
-            <Button onClick={() => handleEdit(row)}>ویرایش</Button>
-            <Button danger onClick={() => handleDelete(row)}>حذف</Button>
-          </Space>
-        ),
+      render: (_: any, row: any) => (
+        <Space>
+          <Button onClick={() => handleDuplicate(row, c.name)}>کپی</Button>
+          <Button onClick={() => handleEdit(row, c.name)}>ویرایش</Button>
+          <Button danger onClick={() => handleDelete(row)}>حذف</Button>
+        </Space>
+      ),
       });
       
       const rows = entries
@@ -550,6 +553,7 @@ export default function FormData() {
     }
     setInlineValues(initial);
     setInlineAdd(true);
+    setInlineScope({ type: 'all' });
   };
 
 
@@ -572,7 +576,7 @@ export default function FormData() {
 
       {inlineAdd && (
         <>
-          {(formDef?.fields && formDef.fields.length > 0) && (
+          {(formDef?.fields && formDef.fields.length > 0) && (inlineScope.type === 'all' || inlineScope.type === 'base') && (
             <>
               <Typography.Title level={5} className="!mb-2">{editingEntryId ? 'ویرایش رکورد - فیلدهای اصلی' : 'افزودن رکورد جدید - فیلدهای اصلی'}</Typography.Title>
               <Table
@@ -585,7 +589,7 @@ export default function FormData() {
               />
             </>
           )}
-          {addCategoryTables.map((cat) => (
+          {(inlineScope.type !== 'base') && addCategoryTables.filter((cat) => inlineScope.type === 'all' || cat.name === inlineScope.category).map((cat) => (
             <div key={cat.name}>
               <Typography.Title level={5} className="!mt-4 !mb-2">{editingEntryId ? `ویرایش رکورد - ${cat.name}` : `افزودن رکورد جدید - ${cat.name}`}</Typography.Title>
               <Table
