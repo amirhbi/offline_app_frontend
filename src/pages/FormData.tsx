@@ -376,7 +376,7 @@ export default function FormData() {
           render: (val: any) => {
             const meta = fieldMeta[key];
             if (meta?.type === 'checkbox') {
-              return typeof val === 'boolean' ? (val ? '✓' : '✗') : '—';
+              return typeof val === 'boolean' ? (val ? '✓' : '—') : '—';
             }
             return val;
           },
