@@ -79,7 +79,9 @@ export default function FormData() {
       case 'number':
         return <Input type="number" value={value} onChange={(e) => setInlineValues((p) => ({ ...p, [key]: e.target.value }))} />;
       case 'date':
-        return <><JalaliLocaleListener /><DatePickerJalali style={{ width: '100%' }} value={value || null} onChange={(d) => setInlineValues((p) => ({ ...p, [key]: d }))} /></>;
+        // Ensure value is parsed/formatted as Jalali when present
+        const dv: any = typeof value === 'string' ? (dayjs as any)(value, { jalali: true }) : value;
+        return <><JalaliLocaleListener /><DatePickerJalali style={{ width: '100%' }} value={dv || null} onChange={(d) => setInlineValues((p) => ({ ...p, [key]: d }))} /></>;
       case 'select':
         if (meta.options && meta.options.length) {
           return (
@@ -111,7 +113,7 @@ export default function FormData() {
     // Base fields
     for (const f of ((formDef.fields ?? []) as FormField[])) {
       const v = row?.data?.[f.label];
-      if (f.type === 'date' && v) initial[f.label] = dayjs(v);
+      if (f.type === 'date' && v) initial[f.label] = (dayjs as any)(v, { jalali: true });
       else if (f.type === 'checkbox') initial[f.label] = !!v;
       else initial[f.label] = v ?? '';
     }
@@ -120,7 +122,7 @@ export default function FormData() {
       for (const f of ((c.fields ?? []) as FormField[])) {
         const key = `${c.name} - ${f.label}`;
         const v = row?.data?.[key];
-        if (f.type === 'date' && v) initial[key] = dayjs(v);
+        if (f.type === 'date' && v) initial[key] = (dayjs as any)(v, { jalali: true });
         else if (f.type === 'checkbox') initial[key] = !!v;
         else if (f.type === 'select') initial[key] = v ?? undefined;
         else initial[key] = v ?? '';
@@ -140,7 +142,7 @@ export default function FormData() {
     const initial: Record<string, any> = {};
     for (const f of ((formDef.fields ?? []) as FormField[])) {
       const v = row?.data?.[f.label];
-      if (f.type === 'date' && v) initial[f.label] = dayjs(v);
+      if (f.type === 'date' && v) initial[f.label] = (dayjs as any)(v, { jalali: true });
       else if (f.type === 'checkbox') initial[f.label] = !!v;
       else if (f.type === 'select') initial[f.label] = v ?? undefined;
       else initial[f.label] = v ?? '';
@@ -149,7 +151,7 @@ export default function FormData() {
       for (const f of ((c.fields ?? []) as FormField[])) {
         const key = `${c.name} - ${f.label}`;
         const v = row?.data?.[key];
-        if (f.type === 'date' && v) initial[key] = dayjs(v);
+        if (f.type === 'date' && v) initial[key] = (dayjs as any)(v, { jalali: true });
         else if (f.type === 'checkbox') initial[key] = !!v;
         else if (f.type === 'select') initial[key] = v ?? undefined;
         else initial[key] = v ?? '';
@@ -297,8 +299,6 @@ export default function FormData() {
         });
       }
     }
-    // Created at
-    cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
     // Prevent header title wrapping for all columns
     return cols.map((c) => ({
       ...c,
@@ -332,7 +332,6 @@ export default function FormData() {
         },
       });
     }
-    cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
     
     // Actions: duplicate, edit, delete
     cols.push({
@@ -382,7 +381,6 @@ export default function FormData() {
           },
         });
       }
-      cols.push({ title: 'زمان ثبت', dataIndex: 'createdAt', key: 'createdAt', render: (d: string) => d ? new Date(d).toLocaleString('fa-IR') : '-' });
       
       // Actions: duplicate, edit, delete
       cols.push({
