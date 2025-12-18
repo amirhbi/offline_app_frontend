@@ -255,7 +255,19 @@ export default function Structure() {
                       <Form.Item
                         name={[field.name, 'label']}
                         label="برچسب فیلد"
-                        rules={[{ required: true, message: 'برچسب الزامی است' }]}
+                        rules={[
+                          { required: true, message: 'برچسب الزامی است' },
+                          {
+                            validator: async (_: any, value: string) => {
+                              const list = (form.getFieldValue('fields') || []) as any[];
+                              const dupCount = list.filter((f, idx) => (f?.label === value) && idx !== field.name).length;
+                              if (value && dupCount > 0) {
+                                return Promise.reject(new Error('برچسب فیلد نباید تکراری باشد'));
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
                       >
                         <Input style={{ width: 180 }} />
                       </Form.Item>
@@ -359,7 +371,19 @@ export default function Structure() {
                                 <Form.Item
                                   name={[field.name, 'label']}
                                   label="برچسب فیلد"
-                                  rules={[{ required: true, message: 'برچسب الزامی است' }]}
+                                  rules={[
+                                    { required: true, message: 'برچسب الزامی است' },
+                                    {
+                                      validator: async (_: any, value: string) => {
+                                        const list = (form.getFieldValue(['categories', cat.name, 'fields']) || []) as any[];
+                                        const dupCount = list.filter((f, idx) => (f?.label === value) && idx !== field.name).length;
+                                        if (value && dupCount > 0) {
+                                          return Promise.reject(new Error('برچسب فیلد باید یکتا باشد'));
+                                        }
+                                        return Promise.resolve();
+                                      },
+                                    },
+                                  ]}
                                 >
                                   <Input style={{ width: 180 }} />
                                 </Form.Item>

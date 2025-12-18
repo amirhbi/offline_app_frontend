@@ -399,10 +399,17 @@ export default function FormData() {
         ),
       });
       
-      const rows = entries.filter((e) => keys.some((k) => {
-        const meta = fieldMeta[k];
-        return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
-      }));
+      const rows = entries
+        .filter((e) => keys.some((k) => {
+          const meta = fieldMeta[k];
+          return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
+        }))
+        .slice()
+        .sort((a, b) => {
+          const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return ad - bd; // oldest first, newest last
+        });
       tables.push({ name: c.name, columns: cols.map((c2) => ({ ...c2, onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }) })), rows });
     }
     return tables;
@@ -475,13 +482,24 @@ export default function FormData() {
 
   // Filter entries shown in the base table to only those having meaningful values in base fields
   const filteredBaseEntries = useMemo(() => {
-    if (!formDef) return entries;
+    if (!formDef) return entries.slice().sort((a, b) => {
+      const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return ad - bd;
+    });
     const keys = (formDef.fields || []).map((f) => f.label);
     if (!keys.length) return [];
-    return entries.filter((e) => keys.some((k) => {
-      const meta = fieldMeta[k];
-      return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
-    }));
+    return entries
+      .filter((e) => keys.some((k) => {
+        const meta = fieldMeta[k];
+        return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
+      }))
+      .slice()
+      .sort((a, b) => {
+        const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return ad - bd; // oldest first, newest last
+      });
   }, [entries, formDef, fieldMeta]);
 
   const exportCsv = () => {
