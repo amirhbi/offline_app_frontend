@@ -129,6 +129,11 @@ export default function FormData() {
         else initial[key] = v ?? '';
       }
     }
+    // Extra: category color fields
+    for (const c of (formDef.categories || [])) {
+      const colorKey = `${c.name} - __color`;
+      initial[colorKey] = row?.data?.[colorKey] ?? undefined;
+    }
     // Extra color field
     initial['__color'] = row?.data?.['__color'] ?? undefined;
     setInlineValues(initial);
@@ -160,6 +165,11 @@ export default function FormData() {
         else if (f.type === 'select') initial[key] = v ?? undefined;
         else initial[key] = v ?? '';
       }
+    }
+    // Extra: category color fields
+    for (const c of (formDef.categories || [])) {
+      const colorKey = `${c.name} - __color`;
+      initial[colorKey] = row?.data?.[colorKey] ?? undefined;
     }
     // Extra color field
     initial['__color'] = row?.data?.['__color'] ?? undefined;
@@ -239,6 +249,14 @@ export default function FormData() {
           }
         }
       }
+      // Include color per category
+      for (const c of formDef.categories || []) {
+        const colorKey = `${c.name} - __color`;
+        const v = inlineValues[colorKey];
+        if (typeof v === 'string' && v.trim() !== '') {
+          data[colorKey] = v.trim();
+        }
+      }
       // Include color if selected
       if (typeof inlineValues['__color'] === 'string' && inlineValues['__color'].trim() !== '') {
         data['__color'] = inlineValues['__color'].trim();
@@ -316,6 +334,15 @@ export default function FormData() {
         });
       }
     }
+    // Category color columns
+    for (const c of formDef.categories || []) {
+      const colorKey = `${c.name} - __color`;
+      cols.push({
+        title: `${c.name} - رنگ`,
+        dataIndex: ['data', colorKey],
+        key: colorKey,
+      });
+    }
     // Prevent header title wrapping for all columns
     return cols.map((c) => ({
       ...c,
@@ -349,21 +376,6 @@ export default function FormData() {
         },
       });
     }
-    // Extra color field (last item before actions)
-    cols.push({
-      title: 'رنگ',
-      dataIndex: ['data', '__color'],
-      key: '__color',
-      render: (val: any) => {
-        if (!val) return '—';
-        return (
-          <span>
-            <span style={{ display: 'inline-block', width: 12, height: 12, border: '1px solid #ddd', borderRadius: 2, backgroundColor: String(val), marginInlineEnd: 8 }} />
-            {String(val)}
-          </span>
-        );
-      },
-    });
     
     // Actions: duplicate, edit, delete
     cols.push({
@@ -506,6 +518,22 @@ export default function FormData() {
         });
       }
 
+      // Category color column (inline add)
+      {
+        const colorKey = `${c.name} - __color`;
+        cols.push({
+          title: 'رنگ',
+          dataIndex: ['data', colorKey],
+          key: colorKey,
+          render: (_val: any, row: any) => row.id === '__new__' ? (
+            <ColorPicker
+              value={inlineValues[colorKey] ?? undefined}
+              onChange={(_, hex) => setInlineValues((p) => ({ ...p, [colorKey]: hex }))}
+            />
+          ) : _val,
+        });
+      }
+
       cols.push({
         title: 'عملیات',
         key: '__actions',
@@ -593,6 +621,11 @@ export default function FormData() {
         else initial[key] = '';
       }
     }
+    // Initialize category color fields
+    for (const c of formDef.categories || []) {
+      const colorKey = `${c.name} - __color`;
+      initial[colorKey] = undefined;
+    }
     // Initialize extra color field
     initial['__color'] = undefined;
     setInlineValues(initial);
@@ -630,6 +663,10 @@ export default function FormData() {
                 loading={loading}
                 pagination={false}
                 scroll={{ x: 'max-content' }}
+                onRow={() => {
+                  const color = inlineValues['__color'];
+                  return { style: color ? { backgroundColor: String(color) } : {} };
+                }}
               />
             </>
           )}
@@ -643,6 +680,10 @@ export default function FormData() {
                 loading={loading}
                 pagination={false}
                 scroll={{ x: 'max-content' }}
+                onRow={() => {
+                  const color = inlineValues[`${cat.name} - __color`];
+                  return { style: color ? { backgroundColor: String(color) } : {} };
+                }}
               />
             </div>
           ))}
@@ -660,6 +701,10 @@ export default function FormData() {
             loading={loading}
             pagination={{ pageSize: 12 }}
             scroll={{ x: 'max-content' }}
+            onRow={(row: any) => {
+              const color = (row?.data || {})['__color'];
+              return { style: color ? { backgroundColor: String(color) } : {} };
+            }}
           />
         </>
       )}
@@ -675,6 +720,10 @@ export default function FormData() {
             loading={loading}
             pagination={{ pageSize: 12 }}
             scroll={{ x: 'max-content' }}
+            onRow={(row: any) => {
+              const color = (row?.data || {})[`${cat.name} - __color`];
+              return { style: color ? { backgroundColor: String(color) } : {} };
+            }}
           />
         </div>
       ))}
