@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { Card, Typography, Table, Space, Button, message, Input, Select, Checkbox, Modal } from 'antd';
+import { Card, Typography, Table, Space, Button, message, Input, Select, Checkbox, Modal, ColorPicker } from 'antd';
 import { DatePicker as DatePickerJalali, JalaliLocaleListener } from "antd-jalali";
 import { useNavigate, useParams } from 'react-router-dom';
 import { getForm, FormRecord, FormField } from '../api/forms';
@@ -129,6 +129,8 @@ export default function FormData() {
         else initial[key] = v ?? '';
       }
     }
+    // Extra color field
+    initial['__color'] = row?.data?.['__color'] ?? undefined;
     setInlineValues(initial);
     setEditingEntryId(null);
     setInlineAdd(true);
@@ -159,6 +161,8 @@ export default function FormData() {
         else initial[key] = v ?? '';
       }
     }
+    // Extra color field
+    initial['__color'] = row?.data?.['__color'] ?? undefined;
     setInlineValues(initial);
     setEditingEntryId(row.id);
     setInlineAdd(true);
@@ -235,6 +239,10 @@ export default function FormData() {
           }
         }
       }
+      // Include color if selected
+      if (typeof inlineValues['__color'] === 'string' && inlineValues['__color'].trim() !== '') {
+        data['__color'] = inlineValues['__color'].trim();
+      }
       if (editingEntryId) {
         await updateFormEntry(formId, editingEntryId, { data });
         message.success('ویرایش رکورد انجام شد');
@@ -286,6 +294,12 @@ export default function FormData() {
               : val),
       });
     }
+    // Extra color field (appended after base fields)
+    cols.push({
+      title: 'رنگ',
+      dataIndex: ['data', '__color'],
+      key: '__color',
+    });
     // Category fields (flattened with prefix)
     for (const c of formDef.categories || []) {
       for (const f of c.fields || []) {
@@ -335,6 +349,21 @@ export default function FormData() {
         },
       });
     }
+    // Extra color field (last item before actions)
+    cols.push({
+      title: 'رنگ',
+      dataIndex: ['data', '__color'],
+      key: '__color',
+      render: (val: any) => {
+        if (!val) return '—';
+        return (
+          <span>
+            <span style={{ display: 'inline-block', width: 12, height: 12, border: '1px solid #ddd', borderRadius: 2, backgroundColor: String(val), marginInlineEnd: 8 }} />
+            {String(val)}
+          </span>
+        );
+      },
+    });
     
     // Actions: duplicate, edit, delete
     cols.push({
@@ -429,6 +458,19 @@ export default function FormData() {
         render: (_val: any, row: any) => row.id === '__new__' ? renderInlineCell(f.label) : _val,
       });
     }
+
+    // Extra color field (last item before actions)
+    cols.push({
+      title: 'رنگ',
+      dataIndex: ['data', '__color'],
+      key: '__color',
+      render: (_val: any, row: any) => row.id === '__new__' ? (
+        <ColorPicker
+          value={inlineValues['__color'] ?? undefined}
+          onChange={(_, hex) => setInlineValues((p) => ({ ...p, '__color': hex }))}
+        />
+      ) : _val,
+    });
 
     // Actions
     cols.push({
@@ -551,6 +593,8 @@ export default function FormData() {
         else initial[key] = '';
       }
     }
+    // Initialize extra color field
+    initial['__color'] = undefined;
     setInlineValues(initial);
     setInlineAdd(true);
     setInlineScope({ type: 'all' });
