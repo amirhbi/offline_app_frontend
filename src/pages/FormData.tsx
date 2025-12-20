@@ -917,7 +917,6 @@ export default function FormData() {
       const wsBase = wb.addWorksheet("فیلدهای اصلی", { views: [{ rightToLeft: true }] });
       const baseHeaders = [
         ...((formDef.fields || []).map((f) => f.label)),
-        ...(includeColors ? ["رنگ"] : []),
       ];
       wsBase.addRow(baseHeaders);
       const headerRow = wsBase.getRow(1);
@@ -934,12 +933,11 @@ export default function FormData() {
         });
         if (!hasAny) continue;
         const values = keys.map((k) => (e.data || {})[k] ?? "");
-        if (includeColors) values.push((e.data || {})["__color"] ?? "");
         wsBase.addRow(values);
         const row = wsBase.getRow(rIndex);
         row.alignment = { horizontal: "right" } as any;
         const argb = normalizeColorToArgb((e.data || {})["__color"]);
-        if (argb) {
+        if (includeColors && argb) {
           row.eachCell((cell) => {
             cell.fill = {
               type: "pattern",
@@ -959,7 +957,6 @@ export default function FormData() {
       const wsCat = wb.addWorksheet(c.name, { views: [{ rightToLeft: true }] });
       const catHeaders = [
         ...((c.fields || []).map((f) => f.label)),
-        ...(includeColors ? ["رنگ"] : []),
       ];
       wsCat.addRow(catHeaders);
       const headerRow = wsCat.getRow(1);
@@ -976,12 +973,11 @@ export default function FormData() {
         });
         if (!hasAny) continue;
         const values = (c.fields || []).map((f) => (e.data || {})[`${c.name} - ${f.label}`] ?? "");
-        if (includeColors) values.push((e.data || {})[`${c.name} - __color`] ?? "");
         wsCat.addRow(values);
         const row = wsCat.getRow(rIndex);
         row.alignment = { horizontal: "right" } as any;
         const argb = normalizeColorToArgb((e.data || {})[`${c.name} - __color`]);
-        if (argb) {
+        if (includeColors && argb) {
           row.eachCell((cell) => {
             cell.fill = {
               type: "pattern",
