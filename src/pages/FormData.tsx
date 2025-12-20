@@ -1003,6 +1003,165 @@ export default function FormData() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadPdf = async () => {
+    if (!formDef) return;
+    const targetEntries = selectedRowIds.length
+      ? entries.filter((e) => selectedRowIds.includes(e.id))
+      : selectAll
+      ? entries.slice()
+      : [];
+
+    if (!targetEntries.length) {
+      message.warning("هیچ رکوردی برای خروجی انتخاب نشده است");
+      return;
+    }
+    if (randomOrder) {
+      for (let i = targetEntries.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [targetEntries[i], targetEntries[j]] = [
+          targetEntries[j],
+          targetEntries[i],
+        ];
+      }
+    }
+
+    const container = document.createElement("div");
+    container.style.pointerEvents = "none";
+    container.style.zIndex = "0";
+    container.style.width = "800px";
+    container.style.padding = "16px";
+    container.style.background = "#fff";
+    container.style.direction = "rtl";
+    container.style.fontFamily =
+      "system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif";
+    container.style.color = "#000";
+
+    const makeSection = (
+      title: string,
+      labels: string[],
+      valueOf: (e: any, l: string) => any,
+      colorOf?: (e: any) => any,
+      metaKeyOf?: (l: string) => string
+    ) => {
+      if (!labels.length) return;
+      const section = document.createElement("section");
+      section.style.pageBreakInside = "avoid";
+      section.style.marginBottom = "16px";
+      const h2 = document.createElement("h2");
+      h2.textContent = title;
+      h2.style.margin = "0 0 8px";
+      h2.style.fontSize = "14px";
+      h2.style.textAlign = "right";
+      section.appendChild(h2);
+
+      const table = document.createElement("table");
+      table.style.width = "100%";
+      table.style.borderCollapse = "collapse";
+      table.style.direction = "rtl";
+
+      const thead = document.createElement("thead");
+      const trh = document.createElement("tr");
+      labels.forEach((lab) => {
+        const th = document.createElement("th");
+        th.textContent = lab;
+        th.style.border = "1px solid #ccc";
+        th.style.padding = "6px 8px";
+        th.style.textAlign = "right";
+        th.style.backgroundColor = "#f7f7f7";
+        trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      let addedRows = 0;
+      for (const e of targetEntries) {
+        const hasAny = labels.some((lab) => {
+          const metaKey = metaKeyOf ? metaKeyOf(lab) : lab;
+          const meta = fieldMeta[metaKey];
+          const v = valueOf(e, lab);
+          if (meta) return hasMeaningfulValue(meta.type, v);
+          if (v === null || v === undefined) return false;
+          if (typeof v === "string") return v.trim().length > 0;
+          if (Array.isArray(v)) return v.length > 0;
+          return true;
+        });
+
+        if (!hasAny) continue;
+
+        const tr = document.createElement("tr");
+        tr.style.textAlign = "right";
+        if (includeColors && colorOf) {
+          const color = colorOf(e);
+          if (color) {
+            tr.style.backgroundColor = String(color);
+          }
+        }
+        labels.forEach((lab) => {
+          const td = document.createElement("td");
+          const v = valueOf(e, lab);
+          td.textContent = v === null || v === undefined ? "" : String(v);
+          td.style.border = "1px solid #ddd";
+          td.style.padding = "6px 8px";
+          td.style.textAlign = "right";
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+        addedRows++;
+      }
+
+      if (addedRows > 0) {
+        table.appendChild(tbody);
+        section.appendChild(table);
+        container.appendChild(section);
+      }
+    };
+
+    // Base section
+    makeSection(
+      "فیلدهای اصلی",
+      (formDef.fields || []).map((f) => f.label),
+      (e, lab) => (e.data || {})[lab] ?? "",
+      (e) => (e.data || {})["__color"]
+    );
+
+    // Category sections
+    for (const c of formDef.categories || []) {
+      makeSection(
+        c.name,
+        (c.fields || []).map((f) => f.label),
+        (e, lab) => (e.data || {})[`${c.name} - ${lab}`] ?? "",
+        (e) => (e.data || {})[`${c.name} - __color`],
+        (lab) => `${c.name} - ${lab}`
+      );
+    }
+
+    if (!container.children.length) {
+      message.warning("هیچ داده‌ای برای خروجی PDF یافت نشد");
+      return;
+    }
+    document.body.appendChild(container);
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    try {
+      const mod = await import("html2pdf.js");
+      const html2pdf = (mod as any).default || (mod as any);
+      const opt = {
+        margin: 2,
+        filename: `${formDef.name}-entries.pdf`,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
+        pagebreak: { mode: ["css", "legacy"] },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      } as any;
+      await html2pdf().from(container).set(opt).save();
+    } catch (err) {
+      console.error(err);
+      message.error("خطا در تولید PDF");
+    } finally {
+      document.body.removeChild(container);
+    }
+  };
+
   const startInlineAdd = () => {
     if (!formDef) return;
     setEditingEntryId(null);
@@ -1088,6 +1247,7 @@ export default function FormData() {
               <Button type="primary" onClick={downloadXlsx}>
                 دانلود XLSX
               </Button>
+              <Button onClick={downloadPdf}>دانلود PDF</Button>
               <Button
                 onClick={() => {
                   setExportView(false);
