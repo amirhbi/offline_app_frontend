@@ -17,6 +17,9 @@ export type FormRecord = {
   name: string;
   fields: FormField[];
   categories?: FormCategory[];
+  // Optional PDF export settings
+  pdfDescription?: string;
+  pdfImage?: string; // filename of an asset, e.g., 'fire_department.png'
 };
 
 type ServerForm = Omit<FormRecord, 'id'> & { _id: string };

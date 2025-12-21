@@ -17,7 +17,9 @@ import {
 import {
   DatePicker as DatePickerJalali,
   JalaliLocaleListener,
-} from "antd-jalali";
+  } from "antd-jalali";
+import logo from "../assets/fire_department.png";
+import reactLogo from "../assets/react.svg";
 import { useNavigate, useParams } from "react-router-dom";
 import { getForm, FormRecord, FormField } from "../api/forms";
 import {
@@ -47,6 +49,45 @@ export default function FormData() {
   const [includeColors, setIncludeColors] = useState(true);
   const [randomOrder, setRandomOrder] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
+  // Export column selection state
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+  const [selectedExportColumnsByCategory, setSelectedExportColumnsByCategory] = useState<Record<string, string[]>>({});
+  const exportColumnOptions = useMemo(() => {
+    if (!formDef) return [] as { value: string; label: string }[];
+    const base = (formDef.fields || []).map((f) => ({ value: f.label, label: f.label }));
+    return base; // Only main fields
+  }, [formDef]);
+
+  const exportColumnOptionsByCategory = useMemo(() => {
+    const map: Record<string, { value: string; label: string }[]> = {};
+    if (!formDef) return map;
+    for (const c of formDef.categories || []) {
+      map[c.name] = (c.fields || []).map((f) => ({ value: `${c.name} - ${f.label}`, label: f.label }));
+    }
+    return map;
+  }, [formDef]);
+
+  // Default: select all columns when options become available
+  useEffect(() => {
+    if (exportColumnOptions.length > 0 && selectedExportColumns.length === 0) {
+      setSelectedExportColumns(exportColumnOptions.map((o) => o.value));
+    }
+  }, [exportColumnOptions]);
+
+  // Default: select all columns per category when form definition changes
+  useEffect(() => {
+    if (!formDef) return;
+    setSelectedExportColumnsByCategory((prev) => {
+      const next = { ...prev };
+      for (const c of formDef.categories || []) {
+        const fullKeys = (c.fields || []).map((f) => `${c.name} - ${f.label}`);
+        if (!next[c.name] || next[c.name].length === 0) {
+          next[c.name] = fullKeys;
+        }
+      }
+      return next;
+    });
+  }, [formDef]);
 
   const load = async () => {
     if (!formId) return;
@@ -911,13 +952,14 @@ export default function FormData() {
     }
 
     const wb = new ExcelJS.Workbook();
+    const filterCols = selectedExportColumns.length > 0;
+    const selColsSet = new Set(selectedExportColumns);
 
     // Base sheet (فیلدهای اصلی)
     if ((formDef.fields || []).length) {
       const wsBase = wb.addWorksheet("فیلدهای اصلی", { views: [{ rightToLeft: true }] });
-      const baseHeaders = [
-        ...((formDef.fields || []).map((f) => f.label)),
-      ];
+      let baseHeaders = (formDef.fields || []).map((f) => f.label);
+      if (filterCols) baseHeaders = baseHeaders.filter((lab) => selColsSet.has(lab));
       wsBase.addRow(baseHeaders);
       const headerRow = wsBase.getRow(1);
       headerRow.font = { bold: true } as any;
@@ -926,13 +968,21 @@ export default function FormData() {
 
       let rIndex = 2;
       for (const e of targetEntries) {
-        const keys = (formDef.fields || []).map((f) => f.label);
+        const keys = baseHeaders;
         const hasAny = keys.some((k) => {
           const meta = fieldMeta[k];
           return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
         });
         if (!hasAny) continue;
-        const values = keys.map((k) => (e.data || {})[k] ?? "");
+        const values = keys.map((k) => {
+          const meta = fieldMeta[k];
+          const v = (e.data || {})[k];
+          if (meta && meta.type === "checkbox") {
+            const checked = v === true || v === "true" || v === 1 || v === "1";
+            return checked ? "✓" : "";
+          }
+          return v ?? "";
+        });
         wsBase.addRow(values);
         const row = wsBase.getRow(rIndex);
         row.alignment = { horizontal: "right" } as any;
@@ -955,9 +1005,14 @@ export default function FormData() {
     for (const c of formDef.categories || []) {
       if (!c.fields || c.fields.length === 0) continue;
       const wsCat = wb.addWorksheet(c.name, { views: [{ rightToLeft: true }] });
-      const catHeaders = [
-        ...((c.fields || []).map((f) => f.label)),
-      ];
+      let catHeaders = (c.fields || []).map((f) => f.label);
+      const catSel = selectedExportColumnsByCategory[c.name];
+      if (catSel && catSel.length > 0) {
+        const catSet = new Set(catSel);
+        catHeaders = catHeaders.filter((lab) => catSet.has(`${c.name} - ${lab}`));
+      } else if (filterCols) {
+        catHeaders = catHeaders.filter((lab) => selColsSet.has(`${c.name} - ${lab}`));
+      }
       wsCat.addRow(catHeaders);
       const headerRow = wsCat.getRow(1);
       headerRow.font = { bold: true } as any;
@@ -966,13 +1021,22 @@ export default function FormData() {
 
       let rIndex = 2;
       for (const e of targetEntries) {
-        const keys = (c.fields || []).map((f) => `${c.name} - ${f.label}`);
+        const keys = catHeaders.map((lab) => `${c.name} - ${lab}`);
         const hasAny = keys.some((k) => {
           const meta = fieldMeta[k];
           return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
         });
         if (!hasAny) continue;
-        const values = (c.fields || []).map((f) => (e.data || {})[`${c.name} - ${f.label}`] ?? "");
+        const values = catHeaders.map((lab) => {
+          const key = `${c.name} - ${lab}`;
+          const meta = fieldMeta[key];
+          const v = (e.data || {})[key];
+          if (meta && meta.type === "checkbox") {
+            const checked = v === true || v === "true" || v === 1 || v === "1";
+            return checked ? "✓" : "";
+          }
+          return v ?? "";
+        });
         wsCat.addRow(values);
         const row = wsCat.getRow(rIndex);
         row.alignment = { horizontal: "right" } as any;
@@ -1025,6 +1089,9 @@ export default function FormData() {
       }
     }
 
+    const filterCols = selectedExportColumns.length > 0;
+    const selColsSet = new Set(selectedExportColumns);
+
     const container = document.createElement("div");
     container.style.pointerEvents = "none";
     container.style.zIndex = "0";
@@ -1035,6 +1102,52 @@ export default function FormData() {
     container.style.fontFamily =
       "system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif";
     container.style.color = "#000";
+
+    // Header with logo at the top
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.justifyContent = "center";
+    header.style.alignItems = "center";
+    header.style.marginBottom = "12px";
+    const headerImg = document.createElement("img");
+    headerImg.src = String(logo);
+    headerImg.alt = "Logo";
+    headerImg.style.maxHeight = "60px";
+    headerImg.style.objectFit = "contain";
+    header.appendChild(headerImg);
+    container.appendChild(header);
+
+    // Optional description text and image below the header
+    let contentImg: HTMLImageElement | null = null;
+    if (formDef?.pdfDescription && String(formDef.pdfDescription).trim().length) {
+      const desc = document.createElement("p");
+      desc.textContent = String(formDef.pdfDescription);
+      desc.style.margin = "0 0 12px";
+      desc.style.fontSize = "13px";
+      desc.style.lineHeight = "1.6";
+      desc.style.textAlign = "right";
+      container.appendChild(desc);
+    }
+    if (formDef?.pdfImage) {
+      const imageMap: Record<string, string> = {
+        "fire_department.png": String(logo),
+        "react.svg": String(reactLogo),
+      };
+      const assetSrc = imageMap[String(formDef.pdfImage)] || "";
+      if (assetSrc) {
+        contentImg = document.createElement("img");
+        contentImg.src = assetSrc;
+        contentImg.alt = "تصویر توضیح";
+        contentImg.style.maxWidth = "100%";
+        contentImg.style.maxHeight = "300px";
+        contentImg.style.objectFit = "contain";
+        contentImg.style.marginBottom = "12px";
+        contentImg.style.display = "block";
+        contentImg.style.marginLeft = "auto";
+        contentImg.style.marginRight = "auto";
+        container.appendChild(contentImg);
+      }
+    }
 
     const makeSection = (
       title: string,
@@ -1100,7 +1213,14 @@ export default function FormData() {
         labels.forEach((lab) => {
           const td = document.createElement("td");
           const v = valueOf(e, lab);
-          td.textContent = v === null || v === undefined ? "" : String(v);
+          const metaKey = metaKeyOf ? metaKeyOf(lab) : lab;
+          const meta = fieldMeta[metaKey];
+          let display = v;
+          if (meta && meta.type === "checkbox") {
+            const checked = v === true || v === "true" || v === 1 || v === "1";
+            display = checked ? "✓" : "";
+          }
+          td.textContent = display === null || display === undefined ? "" : String(display);
           td.style.border = "1px solid #ddd";
           td.style.padding = "6px 8px";
           td.style.textAlign = "right";
@@ -1118,18 +1238,31 @@ export default function FormData() {
     };
 
     // Base section
-    makeSection(
-      "فیلدهای اصلی",
-      (formDef.fields || []).map((f) => f.label),
-      (e, lab) => (e.data || {})[lab] ?? "",
-      (e) => (e.data || {})["__color"]
-    );
+    {
+      const baseInit = (formDef.fields || []).map((f) => f.label);
+      const baseLabels = filterCols ? baseInit.filter((lab) => selColsSet.has(lab)) : baseInit;
+      makeSection(
+        "فیلدهای اصلی",
+        baseLabels,
+        (e, lab) => (e.data || {})[lab] ?? "",
+        (e) => (e.data || {})["__color"]
+      );
+    }
 
     // Category sections
     for (const c of formDef.categories || []) {
+      const catInit = (c.fields || []).map((f) => f.label);
+      const catSel = selectedExportColumnsByCategory[c.name];
+      let catLabels = catInit;
+      if (catSel && catSel.length > 0) {
+        const catSet = new Set(catSel);
+        catLabels = catInit.filter((lab) => catSet.has(`${c.name} - ${lab}`));
+      } else if (filterCols) {
+        catLabels = catInit.filter((lab) => selColsSet.has(`${c.name} - ${lab}`));
+      }
       makeSection(
         c.name,
-        (c.fields || []).map((f) => f.label),
+        catLabels,
         (e, lab) => (e.data || {})[`${c.name} - ${lab}`] ?? "",
         (e) => (e.data || {})[`${c.name} - __color`],
         (lab) => `${c.name} - ${lab}`
@@ -1142,9 +1275,42 @@ export default function FormData() {
     }
     document.body.appendChild(container);
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    // Ensure the logo image is loaded prior to rendering to canvas
+    // Wait for header and optional content images
+    const imgs: HTMLImageElement[] = [headerImg];
+    if (contentImg) imgs.push(contentImg);
+    await Promise.all(
+      imgs.map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) return resolve();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          })
+      )
+    );
     try {
+      // Ensure required globals for html2pdf are available
+      const [jspdfMod, html2canvasMod] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+      const jsPDF =
+        (jspdfMod as any).jsPDF || (jspdfMod as any).default?.jsPDF;
+      if (jsPDF) {
+        (window as any).jspdf = { jsPDF };
+      }
+      (window as any).html2canvas =
+        (html2canvasMod as any).default || (html2canvasMod as any);
+
       const mod = await import("html2pdf.js");
-      const html2pdf = (mod as any).default || (mod as any);
+      // html2pdf.js attaches a global function on window in UMD builds
+      const html2pdfGlobal = (window as any).html2pdf;
+      const html2pdfCandidate =
+        html2pdfGlobal || (mod as any).default || (mod as any).html2pdf || (mod as any);
+      if (typeof html2pdfCandidate !== "function") {
+        throw new Error("html2pdf function is not available");
+      }
       const opt = {
         margin: 2,
         filename: `${formDef.name}-entries.pdf`,
@@ -1153,7 +1319,7 @@ export default function FormData() {
         pagebreak: { mode: ["css", "legacy"] },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       } as any;
-      await html2pdf().from(container).set(opt).save();
+      await html2pdfCandidate().from(container).set(opt).save();
     } catch (err) {
       console.error(err);
       message.error("خطا در تولید PDF");
@@ -1227,7 +1393,7 @@ export default function FormData() {
                   setSelectedRowIds(checked ? entries.map((r) => r.id) : []);
                 }}
               >
-                انتخاب همه
+                انتخاب همه سطر ها
               </Checkbox>
               <Checkbox
                 checked={randomOrder}
@@ -1242,6 +1408,7 @@ export default function FormData() {
                 خروجی با رنگ‌ها
               </Checkbox>
             </div>
+
 
             <div className="flex gap-2">
               <Button type="primary" onClick={downloadXlsx}>
@@ -1259,10 +1426,51 @@ export default function FormData() {
               </Button>
             </div>
           </div>
+          {exportColumnOptions.length > 0 && (
+            <div className="my-8 w-full">
+                <Select
+                  mode="multiple"
+                  className="w-full"
+                  allowClear
+                  style={{ minWidth: 280 }}
+                  placeholder="انتخاب ستون‌های اصلی"
+                  options={exportColumnOptions}
+                  value={selectedExportColumns}
+                  onChange={(vals) => setSelectedExportColumns(vals as string[])}
+                />
+              </div>
+          )}
+            {formDef?.categories && formDef.categories.some((c) => (c.fields || []).length > 0) && (
+              <div className="my-4 flex flex-col gap-3">
+                {formDef.categories
+                  .filter((c) => (c.fields || []).length > 0)
+                  .map((c) => (
+                    <div key={c.name} className="flex flex-col gap-1 w-full">
+                      <Typography.Text>انتخاب ستون‌های دسته «{c.name}»</Typography.Text>
+                      <Select
+                        mode="multiple"
+                        className="w-full"
+                        allowClear
+                        style={{ minWidth: 280 }}
+                        placeholder={`انتخاب ستون‌های ${c.name}`}
+                        options={exportColumnOptionsByCategory[c.name] || []}
+                        value={selectedExportColumnsByCategory[c.name] || []}
+                        onChange={(vals) =>
+                          setSelectedExportColumnsByCategory((prev) => ({
+                            ...prev,
+                            [c.name]: vals as string[],
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+              </div>
+            )}
           <Typography.Paragraph className="mt-2">
             در حالت خروجی، ستون عملیات مخفی است و می‌توانید ردیف‌ها را انتخاب
             کنید.
           </Typography.Paragraph>
+          
         </Card>
       )}
 

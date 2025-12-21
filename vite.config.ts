@@ -12,4 +12,8 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    // html2pdf.js ships UMD/CJS builds that can confuse Vite's dep optimizer
+    exclude: ['html2pdf.js'],
+  },
 });

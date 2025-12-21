@@ -35,6 +35,9 @@ interface FormDefinition {
   fields: FormField[];
   categories?: CategoryDefinition[];
   updatedAt: string;
+  // Optional PDF export settings
+  pdfDescription?: string;
+  pdfImage?: string; // asset filename, e.g., 'fire_department.png'
 }
 
 const API_BASE = '/api';
@@ -55,6 +58,8 @@ export default function Structure() {
       fields: f.fields || [],
       categories: f.categories || [],
       updatedAt: f.updatedAt || f.createdAt || new Date().toISOString(),
+      pdfDescription: f.pdfDescription || '',
+      pdfImage: f.pdfImage || '',
     }));
     setForms(mapped);
   };
@@ -66,7 +71,7 @@ export default function Structure() {
   const openCreate = () => {
     setEditingForm(null);
     form.resetFields();
-    form.setFieldsValue({ name: '', fields: [], categories: [] });
+    form.setFieldsValue({ name: '', fields: [], categories: [], pdfDescription: '', pdfImage: '' });
     setIsModalOpen(true);
   };
 
@@ -90,6 +95,8 @@ export default function Structure() {
           optionsText: f.options?.join(', ') ?? '',
         })),
       })),
+      pdfDescription: record.pdfDescription || '',
+      pdfImage: record.pdfImage || '',
     });
     setIsModalOpen(true);
   };
@@ -130,7 +137,13 @@ export default function Structure() {
         const res = await fetch(`${API_BASE}/forms/${editingForm.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: values.name, fields: normalizedFields, categories: normalizedCategories }),
+          body: JSON.stringify({
+            name: values.name,
+            fields: normalizedFields,
+            categories: normalizedCategories,
+            pdfDescription: values.pdfDescription || '',
+            pdfImage: values.pdfImage || '',
+          }),
         });
         if (!res.ok) throw new Error('Failed to update');
         await fetchForms();
@@ -139,7 +152,13 @@ export default function Structure() {
         const res = await fetch(`${API_BASE}/forms`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: values.name, fields: normalizedFields, categories: normalizedCategories }),
+          body: JSON.stringify({
+            name: values.name,
+            fields: normalizedFields,
+            categories: normalizedCategories,
+            pdfDescription: values.pdfDescription || '',
+            pdfImage: values.pdfImage || '',
+          }),
         });
         if (!res.ok) throw new Error('Failed to create');
         await fetchForms();
@@ -344,7 +363,7 @@ export default function Structure() {
           )}
         </Form.List>
 
-        <Typography.Title level={5} className="mt-4">زیرشاخه‌ها (اختیاری)</Typography.Title>
+        <Typography.Title level={5} className="!mt-4">زیرشاخه‌ها (اختیاری)</Typography.Title>
         <Form.List name="categories">
           {(cats, { add: addCat, remove: removeCat }) => (
             <>
@@ -455,6 +474,24 @@ export default function Structure() {
             </>
           )}
         </Form.List>
+
+        {/* PDF export description and image selection */}
+        <Typography.Title level={5} className="!mt-8">تنظیمات خروجی PDF</Typography.Title>
+        <Form.Item name="pdfDescription" label="توضیح خروجی PDF">
+          <Input.TextArea rows={3} placeholder="متن توضیحاتی که بالای خروجی PDF نمایش داده می‌شود" />
+        </Form.Item>
+        <Form.Item name="pdfImage" label="تصویر پس از توضیح">
+          <Select
+            style={{ width: 320 }}
+            placeholder="انتخاب تصویر برای نمایش پس از توضیح"
+            allowClear
+            options={[
+              { value: '', label: 'بدون تصویر' },
+              { value: 'fire_department.png', label: 'لوگوی سازمان (fire_department.png)' },
+              { value: 'react.svg', label: 'React Logo (react.svg)' },
+            ]}
+          />
+        </Form.Item>
       </Form>
     </Modal>
   </Card>
