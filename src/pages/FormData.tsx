@@ -940,6 +940,28 @@ export default function FormData() {
     return null;
   };
 
+  // Restrict CSS color formats for html2canvas to safe ones.
+  // Returns null for unsupported color functions like oklch(), lab(), lch(), color().
+  const normalizeCssColorForCanvas = (input: any): string | null => {
+    if (!input) return null;
+    const s = String(input).trim();
+    if (s.startsWith('#')) return s;
+    if (/^rgba?\(/i.test(s)) return s;
+    if (/^hsla?\(/i.test(s)) return s;
+    if (/^(oklch|lab|lch|color)\(/i.test(s)) return null;
+    // Try resolving via computed style to a safe rgb/rgba value
+    try {
+      const tmp = document.createElement('span');
+      tmp.style.color = s;
+      document.body.appendChild(tmp);
+      const resolved = getComputedStyle(tmp).color;
+      document.body.removeChild(tmp);
+      if (/^rgba?\(/i.test(resolved)) return resolved;
+      if (resolved.startsWith('#')) return resolved;
+    } catch {}
+    return null;
+  };
+
   const downloadXlsx = async () => {
     if (!formDef) return;
     const targetEntries = selectedRowIds.length
@@ -1108,6 +1130,7 @@ export default function FormData() {
     container.style.width = "800px";
     container.style.padding = "16px";
     container.style.background = "#fff";
+    container.style.backgroundImage = "none";
     container.style.direction = "rtl";
     container.style.fontFamily =
       "system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif";
@@ -1119,6 +1142,7 @@ export default function FormData() {
     header.style.justifyContent = "center";
     header.style.alignItems = "center";
     header.style.marginBottom = "12px";
+    header.style.backgroundImage = "none";
     const headerImg = document.createElement("img");
     headerImg.src = String(logo);
     headerImg.alt = "Logo";
@@ -1170,20 +1194,24 @@ export default function FormData() {
       const section = document.createElement("section");
       section.style.pageBreakInside = "avoid";
       section.style.marginBottom = "16px";
+      section.style.backgroundImage = "none";
       const h2 = document.createElement("h2");
       h2.textContent = title;
       h2.style.margin = "0 0 8px";
       h2.style.fontSize = "14px";
       h2.style.textAlign = "right";
+      h2.style.backgroundImage = "none";
       section.appendChild(h2);
 
       const table = document.createElement("table");
       table.style.width = "100%";
       table.style.borderCollapse = "collapse";
       table.style.direction = "rtl";
+      table.style.backgroundImage = "none";
 
       const thead = document.createElement("thead");
       const trh = document.createElement("tr");
+      trh.style.backgroundImage = "none";
       labels.forEach((lab) => {
         const th = document.createElement("th");
         th.textContent = lab;
@@ -1191,6 +1219,7 @@ export default function FormData() {
         th.style.padding = "6px 8px";
         th.style.textAlign = "right";
         th.style.backgroundColor = "#f7f7f7";
+        th.style.backgroundImage = "none";
         trh.appendChild(th);
       });
       thead.appendChild(trh);
@@ -1214,10 +1243,12 @@ export default function FormData() {
 
         const tr = document.createElement("tr");
         tr.style.textAlign = "right";
+        tr.style.backgroundImage = "none";
         if (includeColors && colorOf) {
-          const color = colorOf(e);
-          if (color) {
-            tr.style.backgroundColor = String(color);
+          const rawColor = colorOf(e);
+          const safeColor = normalizeCssColorForCanvas(rawColor);
+          if (safeColor) {
+            tr.style.backgroundColor = safeColor;
           }
         }
         labels.forEach((lab) => {
@@ -1234,6 +1265,7 @@ export default function FormData() {
           td.style.border = "1px solid #ddd";
           td.style.padding = "6px 8px";
           td.style.textAlign = "right";
+          td.style.backgroundImage = "none";
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
