@@ -687,9 +687,15 @@ export default function FormData() {
       render: (_val: any, row: any) =>
         row.id === "__new__" ? (
           <ColorPicker
+            defaultFormat = {'hex'}
+            format={'hex'}
+            disabledAlpha
+            disabledFormat
             value={inlineValues["__color"] ?? undefined}
-            onChange={(_, hex) =>
-              setInlineValues((p) => ({ ...p, __color: hex }))
+            onChange={(_, hex) => {
+              setInlineValues((p) => ({ ...p, __color: _.toHexString() }))
+            }
+              
             }
           />
         ) : (
@@ -757,8 +763,12 @@ export default function FormData() {
             row.id === "__new__" ? (
               <ColorPicker
                 value={inlineValues[colorKey] ?? undefined}
+                defaultFormat = {'hex'}
+                format={'hex'}
+                disabledAlpha
+                disabledFormat
                 onChange={(_, hex) =>
-                  setInlineValues((p) => ({ ...p, [colorKey]: hex }))
+                  setInlineValues((p) => ({ ...p, [colorKey]: _.toHexString() }))
                 }
               />
             ) : (
@@ -927,31 +937,6 @@ export default function FormData() {
       const toHex = (n: number) => n.toString(16).padStart(2, '0').toUpperCase();
       return `FF${toHex(r)}${toHex(g)}${toHex(b)}`;
     }
-    return null;
-  };
-
-  // Sanitize CSS color for html2canvas: accept only hex/rgb/rgba/hsl/hsla, ignore unsupported (e.g., oklch)
-  const normalizeCssColorForCanvas = (input: any): string | null => {
-    if (!input) return null;
-    const s = String(input).trim();
-    // Common safe formats
-    if (s.startsWith('#')) return s;
-    if (/^rgba?\(/i.test(s)) return s;
-    if (/^hsla?\(/i.test(s)) return s;
-    // Explicitly skip unsupported color functions that html2canvas can't parse
-    if (/^oklch\(/i.test(s) || /^lab\(/i.test(s) || /^lch\(/i.test(s) || /^color\(/i.test(s)) {
-      return null;
-    }
-    // Attempt to resolve via computed style to rgb/rgba if possible
-    try {
-      const tmp = document.createElement('span');
-      tmp.style.color = s;
-      document.body.appendChild(tmp);
-      const resolved = getComputedStyle(tmp).color;
-      document.body.removeChild(tmp);
-      if (/^rgba?\(/i.test(resolved)) return resolved;
-      if (resolved.startsWith('#')) return resolved;
-    } catch {}
     return null;
   };
 
@@ -1230,10 +1215,9 @@ export default function FormData() {
         const tr = document.createElement("tr");
         tr.style.textAlign = "right";
         if (includeColors && colorOf) {
-          const rawColor = colorOf(e);
-          const safeColor = normalizeCssColorForCanvas(rawColor);
-          if (safeColor) {
-            tr.style.backgroundColor = safeColor;
+          const color = colorOf(e);
+          if (color) {
+            tr.style.backgroundColor = String(color);
           }
         }
         labels.forEach((lab) => {
