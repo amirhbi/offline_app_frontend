@@ -1303,7 +1303,7 @@ export default function FormData() {
       // Ensure required globals for html2pdf are available
       const [jspdfMod, html2canvasMod] = await Promise.all([
         import("jspdf"),
-        import("html2canvas-pro"),
+        import("html2canvas"),
       ]);
       const jsPDF =
         (jspdfMod as any).jsPDF || (jspdfMod as any).default?.jsPDF;
