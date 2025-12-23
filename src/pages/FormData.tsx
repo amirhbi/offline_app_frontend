@@ -1325,7 +1325,18 @@ export default function FormData() {
         margin: 2,
         filename: `${formDef.name}-entries.pdf`,
         image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0,
+          ignoreElements: (element: Element) => {
+            if (element.tagName === "STYLE" && element.innerHTML.includes("oklch")) {
+              return true;
+            }
+            return false;
+          },
+        },
         pagebreak: { mode: ["css", "legacy"] },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       } as any;
