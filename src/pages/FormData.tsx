@@ -17,7 +17,7 @@ import {
 import {
   DatePicker as DatePickerJalali,
   JalaliLocaleListener,
-  } from "antd-jalali";
+} from "antd-jalali";
 import logo from "../assets/fire_department.png";
 import reactLogo from "../assets/react.svg";
 import { useNavigate, useParams } from "react-router-dom";
@@ -483,12 +483,12 @@ export default function FormData() {
           row.id === "__new__"
             ? renderInlineCell(f.label)
             : fieldMeta[f.label]?.type === "checkbox"
-            ? typeof val === "boolean"
-              ? val
-                ? "✓"
-                : "✗"
-              : "—"
-            : val,
+              ? typeof val === "boolean"
+                ? val
+                  ? "✓"
+                  : "✗"
+                : "—"
+              : val,
       });
     }
     // Extra color field (appended after base fields)
@@ -509,12 +509,12 @@ export default function FormData() {
             row.id === "__new__"
               ? renderInlineCell(key)
               : fieldMeta[key]?.type === "checkbox"
-              ? typeof val === "boolean"
-                ? val
-                  ? "✓"
-                  : "✗"
-                : "—"
-              : val,
+                ? typeof val === "boolean"
+                  ? val
+                    ? "✓"
+                    : "✗"
+                  : "—"
+                : val,
         });
       }
     }
@@ -687,7 +687,7 @@ export default function FormData() {
       render: (_val: any, row: any) =>
         row.id === "__new__" ? (
           <ColorPicker
-            defaultFormat = {'hex'}
+            defaultFormat={'hex'}
             format={'hex'}
             disabledAlpha
             disabledFormat
@@ -695,7 +695,7 @@ export default function FormData() {
             onChange={(_, hex) => {
               setInlineValues((p) => ({ ...p, __color: _.toHexString() }))
             }
-              
+
             }
           />
         ) : (
@@ -763,7 +763,7 @@ export default function FormData() {
             row.id === "__new__" ? (
               <ColorPicker
                 value={inlineValues[colorKey] ?? undefined}
-                defaultFormat = {'hex'}
+                defaultFormat={'hex'}
                 format={'hex'}
                 disabledAlpha
                 disabledFormat
@@ -861,8 +861,8 @@ export default function FormData() {
     const targetEntries = selectedRowIds.length
       ? entries.filter((e) => selectedRowIds.includes(e.id))
       : selectAll
-      ? entries.slice()
-      : [];
+        ? entries.slice()
+        : [];
     if (!targetEntries.length) {
       message.warning("هیچ رکوردی برای خروجی انتخاب نشده است");
       return;
@@ -945,8 +945,8 @@ export default function FormData() {
     const targetEntries = selectedRowIds.length
       ? entries.filter((e) => selectedRowIds.includes(e.id))
       : selectAll
-      ? entries.slice()
-      : [];
+        ? entries.slice()
+        : [];
     if (!targetEntries.length) {
       message.warning("هیچ رکوردی برای خروجی انتخاب نشده است");
       return;
@@ -1082,8 +1082,8 @@ export default function FormData() {
     const targetEntries = selectedRowIds.length
       ? entries.filter((e) => selectedRowIds.includes(e.id))
       : selectAll
-      ? entries.slice()
-      : [];
+        ? entries.slice()
+        : [];
 
     if (!targetEntries.length) {
       message.warning("هیچ رکوردی برای خروجی انتخاب نشده است");
@@ -1103,15 +1103,21 @@ export default function FormData() {
     const selColsSet = new Set(selectedExportColumns);
 
     const container = document.createElement("div");
-    container.style.pointerEvents = "none";
-    container.style.zIndex = "0";
-    container.style.width = "800px";
-    container.style.padding = "16px";
-    container.style.background = "#fff";
-    container.style.direction = "rtl";
-    container.style.fontFamily =
-      "system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif";
-    container.style.color = "#000";
+    // Isolate from inherited CSS variables to prevent html2canvas oklch parsing errors
+    container.style.cssText = `
+      all: initial;
+      pointer-events: none;
+      z-index: 0;
+      width: 800px;
+      padding: 16px;
+      background: #fff;
+      direction: rtl;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif;
+      color: #000;
+      position: absolute;
+      left: -9999px;
+      top: 0;
+    `;
 
     // Header with logo at the top
     const header = document.createElement("div");
@@ -1449,49 +1455,49 @@ export default function FormData() {
           </div>
           {exportColumnOptions.length > 0 && (
             <div className="my-8 w-full">
-                <Select
-                  mode="multiple"
-                  className="w-full"
-                  allowClear
-                  style={{ minWidth: 280 }}
-                  placeholder="انتخاب ستون‌های اصلی"
-                  options={exportColumnOptions}
-                  value={selectedExportColumns}
-                  onChange={(vals) => setSelectedExportColumns(vals as string[])}
-                />
-              </div>
+              <Select
+                mode="multiple"
+                className="w-full"
+                allowClear
+                style={{ minWidth: 280 }}
+                placeholder="انتخاب ستون‌های اصلی"
+                options={exportColumnOptions}
+                value={selectedExportColumns}
+                onChange={(vals) => setSelectedExportColumns(vals as string[])}
+              />
+            </div>
           )}
-            {formDef?.categories && formDef.categories.some((c) => (c.fields || []).length > 0) && (
-              <div className="my-4 flex flex-col gap-3">
-                {formDef.categories
-                  .filter((c) => (c.fields || []).length > 0)
-                  .map((c) => (
-                    <div key={c.name} className="flex flex-col gap-1 w-full">
-                      <Typography.Text>انتخاب ستون‌های دسته «{c.name}»</Typography.Text>
-                      <Select
-                        mode="multiple"
-                        className="w-full"
-                        allowClear
-                        style={{ minWidth: 280 }}
-                        placeholder={`انتخاب ستون‌های ${c.name}`}
-                        options={exportColumnOptionsByCategory[c.name] || []}
-                        value={selectedExportColumnsByCategory[c.name] || []}
-                        onChange={(vals) =>
-                          setSelectedExportColumnsByCategory((prev) => ({
-                            ...prev,
-                            [c.name]: vals as string[],
-                          }))
-                        }
-                      />
-                    </div>
-                  ))}
-              </div>
-            )}
+          {formDef?.categories && formDef.categories.some((c) => (c.fields || []).length > 0) && (
+            <div className="my-4 flex flex-col gap-3">
+              {formDef.categories
+                .filter((c) => (c.fields || []).length > 0)
+                .map((c) => (
+                  <div key={c.name} className="flex flex-col gap-1 w-full">
+                    <Typography.Text>انتخاب ستون‌های دسته «{c.name}»</Typography.Text>
+                    <Select
+                      mode="multiple"
+                      className="w-full"
+                      allowClear
+                      style={{ minWidth: 280 }}
+                      placeholder={`انتخاب ستون‌های ${c.name}`}
+                      options={exportColumnOptionsByCategory[c.name] || []}
+                      value={selectedExportColumnsByCategory[c.name] || []}
+                      onChange={(vals) =>
+                        setSelectedExportColumnsByCategory((prev) => ({
+                          ...prev,
+                          [c.name]: vals as string[],
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+            </div>
+          )}
           <Typography.Paragraph className="mt-2">
             در حالت خروجی، ستون عملیات مخفی است و می‌توانید ردیف‌ها را انتخاب
             کنید.
           </Typography.Paragraph>
-          
+
         </Card>
       )}
 
@@ -1587,9 +1593,9 @@ export default function FormData() {
             rowSelection={
               exportView
                 ? {
-                    selectedRowKeys: selectedRowIds,
-                    onChange: (keys) => setSelectedRowIds(keys as string[]),
-                  }
+                  selectedRowKeys: selectedRowIds,
+                  onChange: (keys) => setSelectedRowIds(keys as string[]),
+                }
                 : undefined
             }
             onRow={(row: any) => {
@@ -1616,9 +1622,9 @@ export default function FormData() {
             rowSelection={
               exportView
                 ? {
-                    selectedRowKeys: selectedRowIds,
-                    onChange: (keys) => setSelectedRowIds(keys as string[]),
-                  }
+                  selectedRowKeys: selectedRowIds,
+                  onChange: (keys) => setSelectedRowIds(keys as string[]),
+                }
                 : undefined
             }
             onRow={(row: any) => {
