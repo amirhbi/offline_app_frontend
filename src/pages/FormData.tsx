@@ -1336,6 +1336,51 @@ export default function FormData() {
             }
             return false;
           },
+          // Sanitize oklch colors in cloned DOM before rendering (fixes production build issue)
+          onclone: (clonedDoc: Document) => {
+            // Remove style elements containing oklch
+            const styles = clonedDoc.querySelectorAll("style");
+            styles.forEach((style) => {
+              if (style.innerHTML.includes("oklch")) {
+                style.remove();
+              }
+            });
+            // Walk through all elements and replace oklch in inline styles
+            const allElements = clonedDoc.querySelectorAll("*");
+            allElements.forEach((el) => {
+              const htmlEl = el as HTMLElement;
+              if (htmlEl.style && htmlEl.style.cssText) {
+                if (htmlEl.style.cssText.includes("oklch")) {
+                  // Replace oklch values with transparent or remove the property
+                  htmlEl.style.cssText = htmlEl.style.cssText.replace(
+                    /oklch\([^)]+\)/gi,
+                    "transparent"
+                  );
+                }
+              }
+              // Also check computed style CSS variables and override them
+              try {
+                const computed = clonedDoc.defaultView?.getComputedStyle(htmlEl);
+                if (computed) {
+                  // Force background and color to simple values if they contain oklch
+                  const bgColor = computed.backgroundColor;
+                  const color = computed.color;
+                  const borderColor = computed.borderColor;
+                  if (bgColor && bgColor.includes("oklch")) {
+                    htmlEl.style.backgroundColor = "transparent";
+                  }
+                  if (color && color.includes("oklch")) {
+                    htmlEl.style.color = "#000000";
+                  }
+                  if (borderColor && borderColor.includes("oklch")) {
+                    htmlEl.style.borderColor = "#cccccc";
+                  }
+                }
+              } catch {
+                // Ignore errors from getComputedStyle
+              }
+            });
+          },
         },
         pagebreak: { mode: ["css", "legacy"] },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
