@@ -1103,21 +1103,15 @@ export default function FormData() {
     const selColsSet = new Set(selectedExportColumns);
 
     const container = document.createElement("div");
-    // Isolate from inherited CSS variables to prevent html2canvas oklch parsing errors
-    container.style.cssText = `
-      all: initial;
-      pointer-events: none;
-      z-index: 0;
-      width: 800px;
-      padding: 16px;
-      background: #fff;
-      direction: rtl;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif;
-      color: #000;
-      position: absolute;
-      left: -9999px;
-      top: 0;
-    `;
+    container.style.pointerEvents = "none";
+    container.style.zIndex = "0";
+    container.style.width = "800px";
+    container.style.padding = "16px";
+    container.style.background = "#fff";
+    container.style.direction = "rtl";
+    container.style.fontFamily =
+      "system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif";
+    container.style.color = "#000";
 
     // Header with logo at the top
     const header = document.createElement("div");
