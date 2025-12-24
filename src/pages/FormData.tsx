@@ -742,7 +742,7 @@ export default function FormData() {
       ...c,
       onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
     }));
-  }, [formDef, inlineValues]);
+  }, [formDef, inlineValues, subFieldsData, editingEntryId]);
 
   const addCategoryTables = useMemo(() => {
     const tables: { name: string; columns: any[] }[] = [];
@@ -819,7 +819,7 @@ export default function FormData() {
       });
     }
     return tables;
-  }, [formDef, inlineValues]);
+  }, [formDef, inlineValues, subFieldsData, editingEntryId]);
 
   // Filter entries shown in the base table to only those having meaningful values in base fields
   const filteredBaseEntries = useMemo(() => {
@@ -1431,6 +1431,7 @@ export default function FormData() {
     // Initialize extra color field
     initial["__color"] = undefined;
     setInlineValues(initial);
+    setSubFieldsData([]); // Reset subFieldsData for new entry
     setInlineAdd(true);
     setInlineScope({ type: "all" });
   };
@@ -1592,84 +1593,83 @@ export default function FormData() {
               <Typography.Title level={5} className="text-blue-700 !mb-2">
                 زیرفیلدها (سطرهای جدول)
               </Typography.Title>
-              <Table
-                rowKey={(_, idx) => `sub-${idx}`}
-                dataSource={subFieldsData}
-                columns={[
-                  ...(formDef.subFields || []).map((sf) => ({
-                    title: sf.label,
-                    dataIndex: sf.label,
-                    key: sf.label,
-                    render: (val: any, _row: any, idx: number) => {
-                      if (sf.type === "text" || sf.type === "number") {
-                        return (
+              {subFieldsData.map((row, idx) => (
+                <div key={`subrow-${idx}`} className="flex gap-2 mb-2 items-center flex-wrap">
+                  {(formDef.subFields || []).map((sf) => {
+                    if (sf.type === "text" || sf.type === "number") {
+                      return (
+                        <div key={sf.label} className="flex flex-col">
+                          <span className="text-xs text-gray-500 mb-1">{sf.label}</span>
                           <Input
                             type={sf.type === "number" ? "number" : "text"}
-                            value={val}
+                            value={row[sf.label] ?? ""}
+                            style={{ width: 140 }}
                             onChange={(e) => {
+                              const newValue = e.target.value;
                               setSubFieldsData((prev) => {
-                                const copy = [...prev];
-                                copy[idx] = { ...copy[idx], [sf.label]: e.target.value };
+                                const copy = prev.map((r, i) =>
+                                  i === idx ? { ...r, [sf.label]: newValue } : r
+                                );
                                 return copy;
                               });
                             }}
                           />
-                        );
-                      }
-                      if (sf.type === "select" && sf.options?.length) {
-                        return (
+                        </div>
+                      );
+                    }
+                    if (sf.type === "select" && sf.options?.length) {
+                      return (
+                        <div key={sf.label} className="flex flex-col">
+                          <span className="text-xs text-gray-500 mb-1">{sf.label}</span>
                           <Select
                             style={{ width: 140 }}
-                            value={val}
+                            value={row[sf.label] ?? undefined}
                             onChange={(v) => {
                               setSubFieldsData((prev) => {
-                                const copy = [...prev];
-                                copy[idx] = { ...copy[idx], [sf.label]: v };
+                                const copy = prev.map((r, i) =>
+                                  i === idx ? { ...r, [sf.label]: v } : r
+                                );
                                 return copy;
                               });
                             }}
                             options={sf.options.map((o) => ({ value: o, label: o }))}
                             allowClear
                           />
-                        );
-                      }
-                      if (sf.type === "checkbox") {
-                        return (
+                        </div>
+                      );
+                    }
+                    if (sf.type === "checkbox") {
+                      return (
+                        <div key={sf.label} className="flex flex-col">
+                          <span className="text-xs text-gray-500 mb-1">{sf.label}</span>
                           <Checkbox
-                            checked={!!val}
+                            checked={!!row[sf.label]}
                             onChange={(e) => {
                               setSubFieldsData((prev) => {
-                                const copy = [...prev];
-                                copy[idx] = { ...copy[idx], [sf.label]: e.target.checked };
+                                const copy = prev.map((r, i) =>
+                                  i === idx ? { ...r, [sf.label]: e.target.checked } : r
+                                );
                                 return copy;
                               });
                             }}
                           />
-                        );
-                      }
-                      return val;
-                    },
-                  })),
-                  {
-                    title: "عملیات",
-                    key: "__actions",
-                    render: (_: any, _row: any, idx: number) => (
-                      <Button
-                        danger
-                        size="small"
-                        onClick={() => {
-                          setSubFieldsData((prev) => prev.filter((_, i) => i !== idx));
-                        }}
-                      >
-                        حذف
-                      </Button>
-                    ),
-                  },
-                ]}
-                pagination={false}
-                size="small"
-                bordered
-              />
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                  <Button
+                    danger
+                    size="small"
+                    className="mt-4"
+                    onClick={() => {
+                      setSubFieldsData((prev) => prev.filter((_, i) => i !== idx));
+                    }}
+                  >
+                    حذف
+                  </Button>
+                </div>
+              ))}
               <Button
                 type="dashed"
                 className="mt-2 border-blue-400 text-blue-600"
