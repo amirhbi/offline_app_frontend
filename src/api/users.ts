@@ -7,6 +7,7 @@ export type UserRecord = {
   role: 'admin' | 'L3';
   password?: string;
   forms: string[];
+  forms_view: string[];
   reports: string[];
   logs: string[];
   backupAllowed?: boolean;

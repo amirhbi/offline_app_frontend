@@ -111,6 +111,7 @@ export default function Users() {
         password: values.password,
         role: 'admin' as const,
         forms: values.forms || [],
+        forms_view: values.forms_view || [],
         reports: values.reports || [],
         logs: values.logs || [],
       };
@@ -133,7 +134,20 @@ export default function Users() {
       const byName = formsList.find((f) => f.name === v);
       return byName ? byName.id : v;
     });
-    editForm.setFieldsValue({ username: record.username, nickname: record.nickname || '', forms: mappedFormIds, reports: record.reports, logs: record.logs });
+    const mappedFormViewIds = (record.forms_view || []).map((v) => {
+      const byId = formsList.find((f) => f.id === v);
+      if (byId) return v;
+      const byName = formsList.find((f) => f.name === v);
+      return byName ? byName.id : v;
+    });
+    editForm.setFieldsValue({
+      username: record.username,
+      nickname: record.nickname || '',
+      forms: mappedFormIds,
+      forms_view: mappedFormViewIds,
+      reports: record.reports,
+      logs: record.logs,
+    });
     setSelectedEditForms(mappedFormIds || []);
   };
 
@@ -146,6 +160,7 @@ export default function Users() {
         nickname: values.nickname || '',
         password: values.password || undefined,
         forms: values.forms || [],
+        forms_view: values.forms_view || [],
         reports: values.reports || [],
         logs: values.logs || [],
       });
@@ -172,7 +187,7 @@ export default function Users() {
     <Card className="border border-red-300">
       <Space style={{ width: '100%', justifyContent: 'space-between' }} className="mb-4">
         <Typography.Title level={4} className="!mb-0 text-red-600">
-           مدیریت کاربران 
+          مدیریت کاربران
         </Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>ایجاد مدیر بخشی جدید</Button>
       </Space>
@@ -195,6 +210,22 @@ export default function Users() {
                 <Space wrap>
                   {forms.map((f) => (
                     <Tag key={f} color="blue">{truncateText(formNameById[f] || f)}</Tag>
+                  ))}
+                </Space>
+              ) : (
+                'دسترسی داده نشده است'
+              ),
+          },
+          {
+            title: 'دسترسی مشاهده فرم‌ها',
+            dataIndex: 'forms_view',
+            render: (forms: string[]) =>
+              forms && forms.length > 0 ? (
+                <Space wrap>
+                  {forms.map((f) => (
+                    <Tag key={f} color="cyan">
+                      {truncateText(formNameById[f] || f)}
+                    </Tag>
                   ))}
                 </Space>
               ) : (
@@ -263,16 +294,19 @@ export default function Users() {
           layout="vertical"
           onValuesChange={(_, all) => setSelectedCreateForms((all as any)?.forms || [])}
         >
-          <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}> 
+          <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}>
             <Input placeholder="manager_branch_X" />
           </Form.Item>
-          <Form.Item name="nickname" label="نام نمایشی" initialValue="" rules={[{ required: true, message: 'نام نمایشی را وارد کنید' }]}> 
+          <Form.Item name="nickname" label="نام نمایشی" initialValue="" rules={[{ required: true, message: 'نام نمایشی را وارد کنید' }]}>
             <Input placeholder="مدیر_بخش_اطفاء" />
           </Form.Item>
-          <Form.Item name="password" label="رمز عبور" rules={[{ required: true, message: 'رمز عبور را وارد کنید' }]}> 
+          <Form.Item name="password" label="رمز عبور" rules={[{ required: true, message: 'رمز عبور را وارد کنید' }]}>
             <Input.Password placeholder="••••••••" />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی بر عملیات فرم ها">
+            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
+          </Form.Item>
+          <Form.Item name="forms_view" label="دسترسی نمایشی فرم ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
@@ -303,16 +337,19 @@ export default function Users() {
           layout="vertical"
           onValuesChange={(_, all) => setSelectedEditForms((all as any)?.forms || [])}
         >
-          <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}> 
+          <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="nickname" label="نام نمایشی" initialValue="" rules={[{ required: true, message: 'نام نمایشی را وارد کنید' }]}> 
+          <Form.Item name="nickname" label="نام نمایشی" initialValue="" rules={[{ required: true, message: 'نام نمایشی را وارد کنید' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="password" label="رمز عبور (در صورت تغییر)"> 
+          <Form.Item name="password" label="رمز عبور (در صورت تغییر)">
             <Input.Password placeholder="رمز عبور جدید" />
           </Form.Item>
-          <Form.Item name="forms" label="دسترسی فرم‌ها">
+          <Form.Item name="forms" label="دسترسی بر عملیات فرم ها">
+            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
+          </Form.Item>
+          <Form.Item name="forms_view" label="دسترسی نمایشی فرم ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
