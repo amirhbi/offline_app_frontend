@@ -1018,6 +1018,52 @@ export default function FormData() {
           });
         }
         rIndex++;
+
+        // Nested sub-fields rows
+        if (
+          formDef.subFields &&
+          formDef.subFields.length > 0 &&
+          e.data?.subFieldsData &&
+          Array.isArray(e.data.subFieldsData) &&
+          e.data.subFieldsData.length > 0
+        ) {
+          const subLabels = (formDef.subFields || []).map((sf) => sf.label);
+          wsBase.addRow(subLabels);
+          const subHeaderRow = wsBase.getRow(rIndex);
+          subHeaderRow.font = { italic: true, size: 10, color: { argb: "FF555555" } } as any;
+          subHeaderRow.alignment = { horizontal: "right" } as any;
+          subHeaderRow.eachCell((cell) => {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFF0F0F0" },
+            } as any;
+          });
+          rIndex++;
+
+          for (const subItem of e.data.subFieldsData as any[]) {
+            const subValues = (formDef.subFields || []).map((sf) => {
+              const v = subItem[sf.label];
+              if (sf.type === "checkbox") {
+                const checked = v === true || v === "true" || v === 1 || v === "1";
+                return checked ? "✓" : "";
+              }
+              return v ?? "";
+            });
+            wsBase.addRow(subValues);
+            const subDataRow = wsBase.getRow(rIndex);
+            subDataRow.font = { size: 10 } as any;
+            subDataRow.alignment = { horizontal: "right" } as any;
+            subDataRow.eachCell((cell) => {
+              cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "FFF9F9F9" },
+              } as any;
+            });
+            rIndex++;
+          }
+        }
       }
     }
 
