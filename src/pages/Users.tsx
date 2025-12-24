@@ -272,7 +272,7 @@ export default function Users() {
           <Form.Item name="password" label="رمز عبور" rules={[{ required: true, message: 'رمز عبور را وارد کنید' }]}> 
             <Input.Password placeholder="••••••••" />
           </Form.Item>
-          <Form.Item name="forms" label="دسترسی فرم‌ها">
+          <Form.Item name="forms" label="دسترسی بر عملیات فرم ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
