@@ -1174,7 +1174,8 @@ export default function FormData() {
       labels: string[],
       valueOf: (e: any, l: string) => any,
       colorOf?: (e: any) => any,
-      metaKeyOf?: (l: string) => string
+      metaKeyOf?: (l: string) => string,
+      isBaseSection: boolean = false
     ) => {
       if (!labels.length) return;
       const section = document.createElement("section");
@@ -1248,6 +1249,66 @@ export default function FormData() {
         });
         tbody.appendChild(tr);
         addedRows++;
+
+        // Render sub-fields if exists
+        if (
+          isBaseSection &&
+          formDef.subFields &&
+          formDef.subFields.length > 0 &&
+          e.data?.subFieldsData &&
+          Array.isArray(e.data.subFieldsData) &&
+          e.data.subFieldsData.length > 0
+        ) {
+          const subTr = document.createElement("tr");
+          const subTd = document.createElement("td");
+          subTd.colSpan = labels.length;
+          subTd.style.padding = "0 8px 12px 24px";
+          subTd.style.backgroundColor = "#fafafa";
+
+          const subTable = document.createElement("table");
+          subTable.style.width = "100%";
+          subTable.style.borderCollapse = "collapse";
+          subTable.style.marginTop = "4px";
+          subTable.style.fontSize = "11px";
+          subTable.style.direction = "rtl";
+
+          const subThead = document.createElement("thead");
+          const subTrh = document.createElement("tr");
+          (formDef.subFields || []).forEach((sf) => {
+            const th = document.createElement("th");
+            th.textContent = sf.label;
+            th.style.border = "1px solid #eee";
+            th.style.padding = "4px 6px";
+            th.style.textAlign = "right";
+            th.style.backgroundColor = "#eeeeee";
+            subTrh.appendChild(th);
+          });
+          subThead.appendChild(subTrh);
+          subTable.appendChild(subThead);
+
+          const subTbody = document.createElement("tbody");
+          (e.data.subFieldsData as any[]).forEach((subRow) => {
+            const rowTr = document.createElement("tr");
+            (formDef.subFields || []).forEach((sf) => {
+              const rowTd = document.createElement("td");
+              const val = subRow[sf.label];
+              let disp = val;
+              if (sf.type === "checkbox") {
+                disp = val === true || val === "true" || val === 1 || val === "1" ? "✓" : "";
+              }
+              rowTd.textContent = disp === null || disp === undefined ? "" : String(disp);
+              rowTd.style.border = "1px solid #eee";
+              rowTd.style.padding = "4px 6px";
+              rowTd.style.textAlign = "right";
+              rowTr.appendChild(rowTd);
+            });
+            subTbody.appendChild(rowTr);
+          });
+          subTable.appendChild(subTbody);
+          subTd.appendChild(subTable);
+          subTr.appendChild(subTd);
+          tbody.appendChild(subTr);
+        }
       }
 
       if (addedRows > 0) {
@@ -1265,7 +1326,9 @@ export default function FormData() {
         "",
         baseLabels,
         (e, lab) => (e.data || {})[lab] ?? "",
-        (e) => (e.data || {})["__color"]
+        (e) => (e.data || {})["__color"],
+        undefined,
+        true
       );
     }
 
@@ -1285,7 +1348,8 @@ export default function FormData() {
         catLabels,
         (e, lab) => (e.data || {})[`${c.name} - ${lab}`] ?? "",
         (e) => (e.data || {})[`${c.name} - __color`],
-        (lab) => `${c.name} - ${lab}`
+        (lab) => `${c.name} - ${lab}`,
+        false
       );
     }
 
