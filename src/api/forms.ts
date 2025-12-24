@@ -17,6 +17,8 @@ export type FormRecord = {
   name: string;
   fields: FormField[];
   categories?: FormCategory[];
+  subFields?: FormField[];
+  hasSubFields?: boolean;
   // Optional PDF export settings
   pdfDescription?: string;
   pdfImage?: string; // filename of an asset, e.g., 'fire_department.png'

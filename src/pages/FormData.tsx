@@ -38,6 +38,7 @@ export default function FormData() {
   const [loading, setLoading] = useState(false);
   const [inlineAdd, setInlineAdd] = useState(false);
   const [inlineValues, setInlineValues] = useState<Record<string, any>>({});
+  const [subFieldsData, setSubFieldsData] = useState<Record<string, any>[]>([]);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [inlineScope, setInlineScope] = useState<{
     type: "all" | "base" | "category";
@@ -281,6 +282,8 @@ export default function FormData() {
     // Extra color field
     initial["__color"] = row?.data?.["__color"] ?? undefined;
     setInlineValues(initial);
+    // Load subFieldsData if exists (duplicate)
+    setSubFieldsData((row?.data?.subFieldsData || []) as Record<string, any>[]);
     setEditingEntryId(null);
     setInlineAdd(true);
     setInlineScope(
@@ -324,6 +327,8 @@ export default function FormData() {
     // Extra color field
     initial["__color"] = row?.data?.["__color"] ?? undefined;
     setInlineValues(initial);
+    // Load subFieldsData if exists
+    setSubFieldsData((row?.data?.subFieldsData || []) as Record<string, any>[]);
     setEditingEntryId(row.id);
     setInlineAdd(true);
     setInlineScope(
@@ -422,6 +427,10 @@ export default function FormData() {
       ) {
         data["__color"] = inlineValues["__color"].trim();
       }
+      // Include subFieldsData if there's any data (simpler condition)
+      if (subFieldsData.length > 0) {
+        data["subFieldsData"] = subFieldsData;
+      }
       if (editingEntryId) {
         await updateFormEntry(formId, editingEntryId, { data });
         message.success("ویرایش رکورد انجام شد");
@@ -432,6 +441,7 @@ export default function FormData() {
       setInlineAdd(false);
       setEditingEntryId(null);
       setInlineValues({});
+      setSubFieldsData([]);
       load();
     } catch (e: any) {
       message.error(e?.message || "ثبت داده ناموفق بود");
@@ -1252,7 +1262,7 @@ export default function FormData() {
       const baseInit = (formDef.fields || []).map((f) => f.label);
       const baseLabels = filterCols ? baseInit.filter((lab) => selColsSet.has(lab)) : baseInit;
       makeSection(
-        "فیلدهای اصلی",
+        "",
         baseLabels,
         (e, lab) => (e.data || {})[lab] ?? "",
         (e) => (e.data || {})["__color"]
@@ -1575,6 +1585,107 @@ export default function FormData() {
                 />
               </>
             )}
+
+          {/* Sub-fields data entry (Master-Detail rows) */}
+          {formDef?.subFields && formDef.subFields.length > 0 && (
+            <div className="mt-4 mb-4 border border-blue-200 p-4 rounded-md bg-blue-50">
+              <Typography.Title level={5} className="text-blue-700 !mb-2">
+                زیرفیلدها (سطرهای جدول)
+              </Typography.Title>
+              <Table
+                rowKey={(_, idx) => `sub-${idx}`}
+                dataSource={subFieldsData}
+                columns={[
+                  ...(formDef.subFields || []).map((sf) => ({
+                    title: sf.label,
+                    dataIndex: sf.label,
+                    key: sf.label,
+                    render: (val: any, _row: any, idx: number) => {
+                      if (sf.type === "text" || sf.type === "number") {
+                        return (
+                          <Input
+                            type={sf.type === "number" ? "number" : "text"}
+                            value={val}
+                            onChange={(e) => {
+                              setSubFieldsData((prev) => {
+                                const copy = [...prev];
+                                copy[idx] = { ...copy[idx], [sf.label]: e.target.value };
+                                return copy;
+                              });
+                            }}
+                          />
+                        );
+                      }
+                      if (sf.type === "select" && sf.options?.length) {
+                        return (
+                          <Select
+                            style={{ width: 140 }}
+                            value={val}
+                            onChange={(v) => {
+                              setSubFieldsData((prev) => {
+                                const copy = [...prev];
+                                copy[idx] = { ...copy[idx], [sf.label]: v };
+                                return copy;
+                              });
+                            }}
+                            options={sf.options.map((o) => ({ value: o, label: o }))}
+                            allowClear
+                          />
+                        );
+                      }
+                      if (sf.type === "checkbox") {
+                        return (
+                          <Checkbox
+                            checked={!!val}
+                            onChange={(e) => {
+                              setSubFieldsData((prev) => {
+                                const copy = [...prev];
+                                copy[idx] = { ...copy[idx], [sf.label]: e.target.checked };
+                                return copy;
+                              });
+                            }}
+                          />
+                        );
+                      }
+                      return val;
+                    },
+                  })),
+                  {
+                    title: "عملیات",
+                    key: "__actions",
+                    render: (_: any, _row: any, idx: number) => (
+                      <Button
+                        danger
+                        size="small"
+                        onClick={() => {
+                          setSubFieldsData((prev) => prev.filter((_, i) => i !== idx));
+                        }}
+                      >
+                        حذف
+                      </Button>
+                    ),
+                  },
+                ]}
+                pagination={false}
+                size="small"
+                bordered
+              />
+              <Button
+                type="dashed"
+                className="mt-2 border-blue-400 text-blue-600"
+                onClick={() => {
+                  const newRow: Record<string, any> = {};
+                  for (const sf of formDef.subFields || []) {
+                    newRow[sf.label] = sf.type === "checkbox" ? false : "";
+                  }
+                  setSubFieldsData((prev) => [...prev, newRow]);
+                }}
+              >
+                + افزودن سطر
+              </Button>
+            </div>
+          )}
+
           {inlineScope.type !== "base" &&
             addCategoryTables
               .filter(
@@ -1641,6 +1752,43 @@ export default function FormData() {
               const color = (row?.data || {})["__color"];
               return { style: color ? { backgroundColor: String(color) } : {} };
             }}
+            expandable={
+              formDef?.hasSubFields && formDef?.subFields && formDef.subFields.length > 0
+                ? {
+                  expandedRowRender: (record: any) => {
+                    const subFieldRows = (record?.data?.subFieldsData || []) as any[];
+                    if (subFieldRows.length === 0) {
+                      return <Typography.Text type="secondary">بدون زیرفیلد</Typography.Text>;
+                    }
+                    const subCols = (formDef.subFields || []).map((sf) => ({
+                      title: sf.label,
+                      dataIndex: sf.label,
+                      key: sf.label,
+                      render: (val: any) =>
+                        sf.type === "checkbox"
+                          ? typeof val === "boolean"
+                            ? val
+                              ? "✓"
+                              : "✗"
+                            : "—"
+                          : val,
+                    }));
+                    return (
+                      <Table
+                        rowKey={(_, idx) => `sub-${idx}`}
+                        dataSource={subFieldRows}
+                        columns={subCols}
+                        pagination={false}
+                        size="small"
+                        bordered
+                      />
+                    );
+                  },
+                  rowExpandable: (record: any) =>
+                    (record?.data?.subFieldsData || []).length > 0,
+                }
+                : undefined
+            }
           />
         </>
       )}

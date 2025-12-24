@@ -12,10 +12,12 @@ import {
   Checkbox,
   Popconfirm,
   message,
+  Switch,
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox';
+
 
 interface FormField {
   label: string;
@@ -34,10 +36,12 @@ interface FormDefinition {
   name: string;
   fields: FormField[];
   categories?: CategoryDefinition[];
+  subFields?: FormField[];
   updatedAt: string;
   // Optional PDF export settings
   pdfDescription?: string;
   pdfImage?: string; // asset filename, e.g., 'fire_department.png'
+  hasSubFields?: boolean;
 }
 
 const API_BASE = '/api';
@@ -57,6 +61,8 @@ export default function Structure() {
       name: f.name,
       fields: f.fields || [],
       categories: f.categories || [],
+      subFields: f.subFields || [],
+      hasSubFields: f.hasSubFields || false,
       updatedAt: f.updatedAt || f.createdAt || new Date().toISOString(),
       pdfDescription: f.pdfDescription || '',
       pdfImage: f.pdfImage || '',
@@ -71,7 +77,7 @@ export default function Structure() {
   const openCreate = () => {
     setEditingForm(null);
     form.resetFields();
-    form.setFieldsValue({ name: '', fields: [], categories: [], pdfDescription: '', pdfImage: '' });
+    form.setFieldsValue({ name: '', fields: [], subFields: [], categories: [], pdfDescription: '', pdfImage: '', hasSubFields: false });
     setIsModalOpen(true);
   };
 
@@ -80,7 +86,14 @@ export default function Structure() {
     form.resetFields();
     form.setFieldsValue({
       name: record.name,
+      hasSubFields: record.hasSubFields || false,
       fields: record.fields.map((f) => ({
+        label: f.label,
+        type: f.type,
+        required: !!f.required,
+        optionsText: f.options?.join(', ') ?? '',
+      })),
+      subFields: (record.subFields || []).map((f) => ({
         label: f.label,
         type: f.type,
         required: !!f.required,
@@ -111,9 +124,22 @@ export default function Structure() {
         options:
           f.type === 'select'
             ? (f.optionsText || '')
-                .split(',')
-                .map((s: string) => s.trim())
-                .filter(Boolean)
+              .split(',')
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+            : undefined,
+      }));
+
+      const normalizedSubFields: FormField[] = (values.subFields || []).map((f: any) => ({
+        label: f.label,
+        type: f.type,
+        required: !!f.required,
+        options:
+          f.type === 'select'
+            ? (f.optionsText || '')
+              .split(',')
+              .map((s: string) => s.trim())
+              .filter(Boolean)
             : undefined,
       }));
 
@@ -126,9 +152,9 @@ export default function Structure() {
           options:
             f.type === 'select'
               ? (f.optionsText || '')
-                  .split(',')
-                  .map((s: string) => s.trim())
-                  .filter(Boolean)
+                .split(',')
+                .map((s: string) => s.trim())
+                .filter(Boolean)
               : undefined,
         })),
       }));
@@ -140,9 +166,11 @@ export default function Structure() {
           body: JSON.stringify({
             name: values.name,
             fields: normalizedFields,
+            subFields: normalizedSubFields,
             categories: normalizedCategories,
             pdfDescription: values.pdfDescription || '',
             pdfImage: values.pdfImage || '',
+            hasSubFields: values.hasSubFields || false,
           }),
         });
         if (!res.ok) throw new Error('Failed to update');
@@ -155,9 +183,11 @@ export default function Structure() {
           body: JSON.stringify({
             name: values.name,
             fields: normalizedFields,
+            subFields: normalizedSubFields,
             categories: normalizedCategories,
             pdfDescription: values.pdfDescription || '',
             pdfImage: values.pdfImage || '',
+            hasSubFields: values.hasSubFields || false,
           }),
         });
         if (!res.ok) throw new Error('Failed to create');
@@ -226,15 +256,15 @@ export default function Structure() {
   return (
     <Card className="border border-red-300">
       <div className="flex justify-between items-center mb-2">
-      <Typography.Title level={4} className="text-red-600">
-        مدیریت  داده ها
-      </Typography.Title>
+        <Typography.Title level={4} className="text-red-600">
+          مدیریت  داده ها
+        </Typography.Title>
 
-      <Space className="mb-3">
-        <Button type="primary" onClick={openCreate}>
-          ایجاد فرم جدید
-        </Button>
-      </Space>
+        <Space className="mb-3">
+          <Button type="primary" onClick={openCreate}>
+            ایجاد فرم جدید
+          </Button>
+        </Space>
       </div>
 
       <Table
@@ -256,21 +286,44 @@ export default function Structure() {
         cancelText="انصراف"
         width={800}
       >
-      <Form form={form} layout="vertical">
-        <Form.Item
-          name="name"
-          label="نام فرم"
-          rules={[{ required: true, message: 'نام فرم الزامی است' }]}
-        >
-          <Input placeholder="مثلاً: فرم شکایات" />
-        </Form.Item>
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="name"
+            label="نام فرم"
+            rules={[{ required: true, message: 'نام فرم الزامی است' }]}
+          >
+            <Input placeholder="مثلاً: فرم شکایات" />
+          </Form.Item>
 
-        <Form.List name="fields">
-          {(fields, { add, remove }) => (
-            <>
-              {fields.map((field) => (
-                <Card key={field.key} size="small" className="mb-3">
-                  <Space align="start" wrap>
+          <Form.Item name="hasSubFields" valuePropName="checked" label="استفاده از زیرفیلد برای فیلدهای اصلی">
+            <Switch
+              onChange={(checked) => {
+                if (checked) {
+                  // Explicitly clear categories if switching to sub-fields mode if desired, 
+                  // or just rely on conditional rendering.
+                  // form.setFieldValue('categories', []); 
+                }
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.hasSubFields !== cur.hasSubFields}>
+            {({ getFieldValue }) => {
+              const hasSubFields = getFieldValue('hasSubFields');
+              return hasSubFields ? (
+                <Typography.Text type="secondary" className="block mb-4">
+                  در این حالت، لیست دسته‌بندی‌ها غیرفعال شده و هر فیلد اصلی می‌تواند زیرفیلدهای خود را داشته باشد.
+                </Typography.Text>
+              ) : null;
+            }}
+          </Form.Item>
+
+          <Form.List name="fields">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map((field) => (
+                  <Card key={field.key} size="small" className="mb-3">
+                    <Space align="start" wrap>
                       <Form.Item
                         name={[field.name, 'label']}
                         label="برچسب فیلد"
@@ -290,7 +343,7 @@ export default function Structure() {
                       >
                         <Input style={{ width: 180 }} />
                       </Form.Item>
-                      
+
                       <Form.Item
                         name={[field.name, 'type']}
                         label="نوع داده"
@@ -349,68 +402,50 @@ export default function Structure() {
                         حذف فیلد
                       </Button>
                     </Space>
+
+
                   </Card>
-              ))}
+                ))}
 
-              <Button
-                type="dashed"
-                onClick={() => add({ type: 'text', required: false })}
-                block
-              >
-                افزودن فیلد
-              </Button>
-            </>
-          )}
-        </Form.List>
+                <Button
+                  type="dashed"
+                  onClick={() => add({ type: 'text', required: false })}
+                  block
+                >
+                  افزودن فیلد
+                </Button>
+              </>
+            )}
+          </Form.List>
 
-        <Typography.Title level={5} className="!mt-4">زیرشاخه‌ها (اختیاری)</Typography.Title>
-        <Form.List name="categories">
-          {(cats, { add: addCat, remove: removeCat }) => (
-            <>
-              {cats.map((cat) => (
-                <Card key={cat.key} size="small" className="mb-4 border border-gray-200">
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <Space align="center" className="justify-between">
-                      <Form.Item
-                        name={[cat.name, 'name']}
-                        label="نام زیرشاخه"
-                        rules={[{ required: true, message: 'نام زیرشاخه را وارد کنید' }]}
-                      >
-                        <Input style={{ width: 240 }} placeholder="مثلاً: تجهیزات برقی" />
-                      </Form.Item>
-                      <Button danger onClick={() => removeCat(cat.name)}>حذف زیرشاخه</Button>
-                    </Space>
 
-                    <Form.List name={[cat.name, 'fields']}>
-                      {(fields, { add, remove }) => (
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.hasSubFields !== cur.hasSubFields}>
+            {({ getFieldValue }) => {
+              const hasSubFields = getFieldValue('hasSubFields');
+              if (hasSubFields) {
+                return (
+                  <div className="mt-8 mb-8 border border-blue-200 p-4 rounded-md bg-blue-50">
+                    <Typography.Title level={5} className="text-blue-700">تعریف ستون‌های زیرفیلد (برای سطرها)</Typography.Title>
+                    <Typography.Text type="secondary" className="block mb-4">
+                      فیلدهایی که در این بخش تعریف می‌کنید، به عنوان ستون‌های جدول برای ورودی‌های چندردیفه استفاده خواهند شد.
+                    </Typography.Text>
+                    <Form.List name="subFields">
+                      {(subFields, { add, remove }) => (
                         <>
-                          {fields.map((field) => (
-                            <Card key={field.key} size="small" className="mb-3">
+                          {subFields.map((field) => (
+                            <Card key={field.key} size="small" className="mb-3 border-blue-200 shadow-sm">
                               <Space align="start" wrap>
                                 <Form.Item
                                   name={[field.name, 'label']}
-                                  label="برچسب فیلد"
-                                  rules={[
-                                    { required: true, message: 'برچسب الزامی است' },
-                                    {
-                                      validator: async (_: any, value: string) => {
-                                        const list = (form.getFieldValue(['categories', cat.name, 'fields']) || []) as any[];
-                                        const dupCount = list.filter((f, idx) => (f?.label === value) && idx !== field.name).length;
-                                        if (value && dupCount > 0) {
-                                          return Promise.reject(new Error('برچسب فیلد باید یکتا باشد'));
-                                        }
-                                        return Promise.resolve();
-                                      },
-                                    },
-                                  ]}
+                                  label="نام ستون"
+                                  rules={[{ required: true, message: 'الزامی' }]}
                                 >
                                   <Input style={{ width: 180 }} />
                                 </Form.Item>
-                                
                                 <Form.Item
                                   name={[field.name, 'type']}
                                   label="نوع داده"
-                                  rules={[{ required: true, message: 'نوع داده را انتخاب کنید' }]}
+                                  rules={[{ required: true }]}
                                 >
                                   <Select
                                     style={{ width: 160 }}
@@ -423,7 +458,6 @@ export default function Structure() {
                                     ]}
                                   />
                                 </Form.Item>
-
                                 <Form.Item
                                   name={[field.name, 'required']}
                                   valuePropName="checked"
@@ -435,19 +469,19 @@ export default function Structure() {
                                 <Form.Item
                                   noStyle
                                   shouldUpdate={(prev, cur) =>
-                                    prev?.categories?.[cat.name]?.fields?.[field.name]?.type !==
-                                    cur?.categories?.[cat.name]?.fields?.[field.name]?.type
+                                    prev?.subFields?.[field.name]?.type !==
+                                    cur?.subFields?.[field.name]?.type
                                   }
                                 >
                                   {() => {
-                                    const type = form.getFieldValue(['categories', cat.name, 'fields', field.name, 'type']);
+                                    const type = form.getFieldValue(['subFields', field.name, 'type']);
                                     if (type === 'select') {
                                       return (
                                         <Form.Item
                                           name={[field.name, 'optionsText']}
-                                          label="گزینه‌ها (با کاما جدا کنید)"
+                                          label="گزینه‌ها"
                                         >
-                                          <Input style={{ width: 280 }} placeholder="مثلاً: گزینه۱, گزینه۲, گزینه۳" />
+                                          <Input style={{ width: 280 }} placeholder="گزینه۱, گزینه۲" />
                                         </Form.Item>
                                       );
                                     }
@@ -455,45 +489,156 @@ export default function Structure() {
                                   }}
                                 </Form.Item>
 
-                                <Button danger onClick={() => remove(field.name)}>حذف فیلد</Button>
+                                <Button danger onClick={() => remove(field.name)}>حذف ستون</Button>
                               </Space>
                             </Card>
                           ))}
-                          <Button type="dashed" onClick={() => add({ type: 'text', required: false })} block>
-                            افزودن فیلد در زیرشاخه
+                          <Button type="dashed" onClick={() => add({ type: 'text', required: false })} block className="border-blue-400 text-blue-600">
+                            + افزودن ستون زیرفیلد
                           </Button>
                         </>
                       )}
                     </Form.List>
-                  </Space>
-                </Card>
-              ))}
-              <Button type="dashed" onClick={() => addCat({ name: '', fields: [] })} block>
-                افزودن زیرشاخه
-              </Button>
-            </>
-          )}
-        </Form.List>
+                  </div>
+                );
+              }
+              return !hasSubFields && (
+                <>
+                  <Typography.Title level={5} className="!mt-4">زیرشاخه‌ها (اختیاری)</Typography.Title>
+                  <Form.List name="categories">
+                    {(cats, { add: addCat, remove: removeCat }) => (
+                      <>
+                        {cats.map((cat) => (
+                          <Card key={cat.key} size="small" className="mb-4 border border-gray-200">
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                              <Space align="center" className="justify-between">
+                                <Form.Item
+                                  name={[cat.name, 'name']}
+                                  label="نام زیرشاخه"
+                                  rules={[{ required: true, message: 'نام زیرشاخه را وارد کنید' }]}
+                                >
+                                  <Input style={{ width: 240 }} placeholder="مثلاً: تجهیزات برقی" />
+                                </Form.Item>
+                                <Button danger onClick={() => removeCat(cat.name)}>حذف زیرشاخه</Button>
+                              </Space>
 
-        {/* PDF export description and image selection */}
-        <Typography.Title level={5} className="!mt-8">تنظیمات خروجی PDF</Typography.Title>
-        <Form.Item name="pdfDescription" label="توضیح خروجی PDF">
-          <Input.TextArea rows={3} placeholder="متن توضیحاتی که بالای خروجی PDF نمایش داده می‌شود" />
-        </Form.Item>
-        <Form.Item name="pdfImage" label="تصویر پس از توضیح">
-          <Select
-            style={{ width: 320 }}
-            placeholder="انتخاب تصویر برای نمایش پس از توضیح"
-            allowClear
-            options={[
-              { value: '', label: 'بدون تصویر' },
-              { value: 'fire_department.png', label: 'لوگوی سازمان (fire_department.png)' },
-              { value: 'react.svg', label: 'React Logo (react.svg)' },
-            ]}
-          />
-        </Form.Item>
-      </Form>
-    </Modal>
-  </Card>
+                              <Form.List name={[cat.name, 'fields']}>
+                                {(fields, { add, remove }) => (
+                                  <>
+                                    {fields.map((field) => (
+                                      <Card key={field.key} size="small" className="mb-3">
+                                        <Space align="start" wrap>
+                                          <Form.Item
+                                            name={[field.name, 'label']}
+                                            label="برچسب فیلد"
+                                            rules={[
+                                              { required: true, message: 'برچسب الزامی است' },
+                                              {
+                                                validator: async (_: any, value: string) => {
+                                                  const list = (form.getFieldValue(['categories', cat.name, 'fields']) || []) as any[];
+                                                  const dupCount = list.filter((f, idx) => (f?.label === value) && idx !== field.name).length;
+                                                  if (value && dupCount > 0) {
+                                                    return Promise.reject(new Error('برچسب فیلد باید یکتا باشد'));
+                                                  }
+                                                  return Promise.resolve();
+                                                },
+                                              },
+                                            ]}
+                                          >
+                                            <Input style={{ width: 180 }} />
+                                          </Form.Item>
+
+                                          <Form.Item
+                                            name={[field.name, 'type']}
+                                            label="نوع داده"
+                                            rules={[{ required: true, message: 'نوع داده را انتخاب کنید' }]}
+                                          >
+                                            <Select
+                                              style={{ width: 160 }}
+                                              options={[
+                                                { value: 'text', label: 'متن' },
+                                                { value: 'number', label: 'عدد' },
+                                                { value: 'date', label: 'تاریخ' },
+                                                { value: 'select', label: 'انتخابی' },
+                                                { value: 'checkbox', label: 'چک‌باکس' },
+                                              ]}
+                                            />
+                                          </Form.Item>
+
+                                          <Form.Item
+                                            name={[field.name, 'required']}
+                                            valuePropName="checked"
+                                            label="ضروری"
+                                          >
+                                            <Checkbox />
+                                          </Form.Item>
+
+                                          <Form.Item
+                                            noStyle
+                                            shouldUpdate={(prev, cur) =>
+                                              prev?.categories?.[cat.name]?.fields?.[field.name]?.type !==
+                                              cur?.categories?.[cat.name]?.fields?.[field.name]?.type
+                                            }
+                                          >
+                                            {() => {
+                                              const type = form.getFieldValue(['categories', cat.name, 'fields', field.name, 'type']);
+                                              if (type === 'select') {
+                                                return (
+                                                  <Form.Item
+                                                    name={[field.name, 'optionsText']}
+                                                    label="گزینه‌ها (با کاما جدا کنید)"
+                                                  >
+                                                    <Input style={{ width: 280 }} placeholder="مثلاً: گزینه۱, گزینه۲, گزینه۳" />
+                                                  </Form.Item>
+                                                );
+                                              }
+                                              return null;
+                                            }}
+                                          </Form.Item>
+
+                                          <Button danger onClick={() => remove(field.name)}>حذف فیلد</Button>
+                                        </Space>
+                                      </Card>
+                                    ))}
+                                    <Button type="dashed" onClick={() => add({ type: 'text', required: false })} block>
+                                      افزودن فیلد در زیرشاخه
+                                    </Button>
+                                  </>
+                                )}
+                              </Form.List>
+                            </Space>
+                          </Card>
+                        ))}
+                        <Button type="dashed" onClick={() => addCat({ name: '', fields: [] })} block>
+                          افزودن زیرشاخه
+                        </Button>
+                      </>
+                    )}
+                  </Form.List>
+                </>
+              )
+            }}
+          </Form.Item>
+
+          {/* PDF export description and image selection */}
+          <Typography.Title level={5} className="!mt-8">تنظیمات خروجی PDF</Typography.Title>
+          <Form.Item name="pdfDescription" label="توضیح خروجی PDF">
+            <Input.TextArea rows={3} placeholder="متن توضیحاتی که بالای خروجی PDF نمایش داده می‌شود" />
+          </Form.Item>
+          <Form.Item name="pdfImage" label="تصویر پس از توضیح">
+            <Select
+              style={{ width: 320 }}
+              placeholder="انتخاب تصویر برای نمایش پس از توضیح"
+              allowClear
+              options={[
+                { value: '', label: 'بدون تصویر' },
+                { value: 'fire_department.png', label: 'لوگوی سازمان (fire_department.png)' },
+                { value: 'react.svg', label: 'React Logo (react.svg)' },
+              ]}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </Card>
   );
 }
