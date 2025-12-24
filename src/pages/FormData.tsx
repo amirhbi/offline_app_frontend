@@ -118,6 +118,9 @@ export default function FormData() {
         type: FormRecord["fields"][number]["type"];
         options?: string[];
         required?: boolean;
+        lookupFormId?: string;
+        lookupSourceField?: string;
+        lookupMap?: Record<string, string>;
       }
     > = {};
     if (!formDef) return meta;
@@ -126,6 +129,8 @@ export default function FormData() {
         type: f.type,
         options: f.options,
         required: f.required,
+        lookupFormId: f.lookupFormId,
+        lookupSourceField: f.lookupSourceField,
       };
     for (const c of formDef.categories || []) {
       for (const f of c.fields || [])
@@ -133,6 +138,8 @@ export default function FormData() {
           type: f.type,
           options: f.options,
           required: f.required,
+          lookupFormId: f.lookupFormId,
+          lookupSourceField: f.lookupSourceField,
         };
     }
     return meta;
@@ -233,6 +240,55 @@ export default function FormData() {
             onChange={(e) =>
               setInlineValues((p) => ({ ...p, [key]: e.target.checked }))
             }
+          />
+        );
+      case "lookup":
+        return (
+          <Input.Search
+            value={value}
+            placeholder="جستجو..."
+            onChange={(e) =>
+              setInlineValues((p) => ({ ...p, [key]: e.target.value }))
+            }
+            onSearch={async (val) => {
+              if (!val) return;
+              if (!meta.lookupFormId || !meta.lookupSourceField) {
+                message.warning("تنظیمات جستجو ناقص است");
+                return;
+              }
+              try {
+                const results = await listFormEntries(meta.lookupFormId);
+                const match = results.find(
+                  (r) => String(r.data[meta.lookupSourceField!]) === String(val)
+                );
+                if (match) {
+                  const updates: Record<string, any> = {};
+                  const categoryPrefix = key.includes(" - ")
+                    ? key.split(" - ")[0] + " - "
+                    : "";
+
+                  // auto-fill based on matching labels
+                  Object.keys(match.data).forEach((sourceLabel) => {
+                    const val = match.data[sourceLabel];
+                    // check direct match
+                    if (fieldMeta[sourceLabel]) {
+                      updates[sourceLabel] = val;
+                    }
+                    // check category prefixed match
+                    else if (categoryPrefix && fieldMeta[categoryPrefix + sourceLabel]) {
+                      updates[categoryPrefix + sourceLabel] = val;
+                    }
+                  });
+
+                  setInlineValues((p) => ({ ...p, ...updates, [key]: val }));
+                  message.success("داده‌ها بازخوانی شد");
+                } else {
+                  message.error("موردی یافت نشد");
+                }
+              } catch (e) {
+                message.error("خطا در جستجو");
+              }
+            }}
           />
         );
       default:
@@ -1761,6 +1817,58 @@ export default function FormData() {
                                 );
                                 return copy;
                               });
+                            }}
+                          />
+                        </div>
+                      );
+                    }
+                    if (sf.type === "lookup") {
+                      return (
+                        <div key={sf.label} className="flex flex-col">
+                          <span className="text-xs text-gray-500 mb-1">{sf.label}</span>
+                          <Input.Search
+                            value={row[sf.label] ?? ""}
+                            style={{ width: 180 }}
+                            onChange={(e) => {
+                              const newValue = e.target.value;
+                              setSubFieldsData((prev) =>
+                                prev.map((r, i) =>
+                                  i === idx ? { ...r, [sf.label]: newValue } : r
+                                )
+                              );
+                            }}
+                            onSearch={async (val) => {
+                              if (!val) return;
+                              if (!sf.lookupFormId || !sf.lookupSourceField) {
+                                message.warning("تنظیمات جستجو ناقص است");
+                                return;
+                              }
+                              try {
+                                const results = await listFormEntries(sf.lookupFormId);
+                                const match = results.find(
+                                  (r) => String(r.data[sf.lookupSourceField!]) === String(val)
+                                );
+                                if (match) {
+                                  const updates: Record<string, any> = {};
+                                  // auto-fill based on matching labels for subfields
+                                  Object.keys(match.data).forEach((sourceLabel) => {
+                                    const val = match.data[sourceLabel];
+                                    if ((formDef.subFields || []).some(s => s.label === sourceLabel)) {
+                                      updates[sourceLabel] = val;
+                                    }
+                                  });
+                                  setSubFieldsData((prev) =>
+                                    prev.map((r, i) =>
+                                      i === idx ? { ...r, ...updates, [sf.label]: val } : r
+                                    )
+                                  );
+                                  message.success("داده‌ها بازخوانی شد");
+                                } else {
+                                  message.error("موردی یافت نشد");
+                                }
+                              } catch (e) {
+                                message.error("خطا در جستجو");
+                              }
                             }}
                           />
                         </div>

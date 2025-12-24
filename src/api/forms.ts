@@ -2,9 +2,11 @@ import { request } from './client';
 
 export type FormField = {
   label: string;
-  type: 'text' | 'number' | 'date' | 'select' | 'checkbox';
+  type: 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'lookup';
   required?: boolean;
   options?: string[];
+  lookupFormId?: string;
+  lookupSourceField?: string;
 };
 
 export type FormCategory = {

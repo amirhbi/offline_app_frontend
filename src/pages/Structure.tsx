@@ -16,7 +16,7 @@ import {
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
-type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox';
+type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'lookup';
 
 
 interface FormField {
@@ -24,6 +24,8 @@ interface FormField {
   type: FieldType;
   required?: boolean;
   options?: string[];
+  lookupFormId?: string;
+  lookupSourceField?: string;
 }
 
 interface CategoryDefinition {
@@ -92,12 +94,16 @@ export default function Structure() {
         type: f.type,
         required: !!f.required,
         optionsText: f.options?.join(', ') ?? '',
+        lookupFormId: f.lookupFormId,
+        lookupSourceField: f.lookupSourceField,
       })),
       subFields: (record.subFields || []).map((f) => ({
         label: f.label,
         type: f.type,
         required: !!f.required,
         optionsText: f.options?.join(', ') ?? '',
+        lookupFormId: f.lookupFormId,
+        lookupSourceField: f.lookupSourceField,
       })),
       categories: (record.categories || []).map((c) => ({
         name: c.name,
@@ -106,6 +112,8 @@ export default function Structure() {
           type: f.type,
           required: !!f.required,
           optionsText: f.options?.join(', ') ?? '',
+          lookupFormId: f.lookupFormId,
+          lookupSourceField: f.lookupSourceField,
         })),
       })),
       pdfDescription: record.pdfDescription || '',
@@ -117,7 +125,7 @@ export default function Structure() {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      const normalizedFields: FormField[] = (values.fields || []).map((f: any) => ({
+      const normalizeField = (f: any) => ({
         label: f.label,
         type: f.type,
         required: !!f.required,
@@ -128,35 +136,15 @@ export default function Structure() {
               .map((s: string) => s.trim())
               .filter(Boolean)
             : undefined,
-      }));
+        lookupFormId: f.lookupFormId,
+        lookupSourceField: f.lookupSourceField,
+      });
 
-      const normalizedSubFields: FormField[] = (values.subFields || []).map((f: any) => ({
-        label: f.label,
-        type: f.type,
-        required: !!f.required,
-        options:
-          f.type === 'select'
-            ? (f.optionsText || '')
-              .split(',')
-              .map((s: string) => s.trim())
-              .filter(Boolean)
-            : undefined,
-      }));
-
+      const normalizedFields: FormField[] = (values.fields || []).map(normalizeField);
+      const normalizedSubFields: FormField[] = (values.subFields || []).map(normalizeField);
       const normalizedCategories: CategoryDefinition[] = (values.categories || []).map((c: any) => ({
         name: c.name,
-        fields: (c.fields || []).map((f: any) => ({
-          label: f.label,
-          type: f.type,
-          required: !!f.required,
-          options:
-            f.type === 'select'
-              ? (f.optionsText || '')
-                .split(',')
-                .map((s: string) => s.trim())
-                .filter(Boolean)
-              : undefined,
-        })),
+        fields: (c.fields || []).map(normalizeField),
       }));
 
       if (editingForm) {
@@ -353,13 +341,14 @@ export default function Structure() {
                         }]}
                       >
                         <Select
-                          style={{ width: 160 }}
+                          style={{ width: 200 }}
                           options={[
                             { value: 'text', label: 'متن' },
                             { value: 'number', label: 'عدد' },
                             { value: 'date', label: 'تاریخ' },
                             { value: 'select', label: 'انتخابی' },
                             { value: 'checkbox', label: 'چک‌باکس' },
+                            { value: 'lookup', label: 'جستجو از فرم دیگر' },
                           ]}
                         />
                       </Form.Item>
@@ -394,9 +383,33 @@ export default function Structure() {
                               </Form.Item>
                             );
                           }
+                          if (type === 'lookup') {
+                            return (
+                              <>
+                                <Form.Item
+                                  name={[field.name, 'lookupFormId']}
+                                  label="انتخاب فرم مبدا"
+                                  rules={[{ required: true }]}
+                                >
+                                  <Select
+                                    style={{ width: 220 }}
+                                    options={forms.map((f) => ({ value: f.id, label: f.name }))}
+                                  />
+                                </Form.Item>
+                                <Form.Item
+                                  name={[field.name, 'lookupSourceField']}
+                                  label="فیلد کد/شناسه در فرم مبدا"
+                                  rules={[{ required: true }]}
+                                >
+                                  <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
+                                </Form.Item>
+                              </>
+                            );
+                          }
                           return null;
                         }}
                       </Form.Item>
+
 
                       <Button danger onClick={() => remove(field.name)}>
                         حذف فیلد
@@ -455,6 +468,7 @@ export default function Structure() {
                                       { value: 'date', label: 'تاریخ' },
                                       { value: 'select', label: 'انتخابی' },
                                       { value: 'checkbox', label: 'چک‌باکس' },
+                                      { value: 'lookup', label: 'جستجو از فرم دیگر' },
                                     ]}
                                   />
                                 </Form.Item>
@@ -483,6 +497,29 @@ export default function Structure() {
                                         >
                                           <Input style={{ width: 280 }} placeholder="گزینه۱, گزینه۲" />
                                         </Form.Item>
+                                      );
+                                    }
+                                    if (type === 'lookup') {
+                                      return (
+                                        <>
+                                          <Form.Item
+                                            name={[field.name, 'lookupFormId']}
+                                            label="انتخاب فرم مبدا"
+                                            rules={[{ required: true }]}
+                                          >
+                                            <Select
+                                              style={{ width: 220 }}
+                                              options={forms.map((f) => ({ value: f.id, label: f.name }))}
+                                            />
+                                          </Form.Item>
+                                          <Form.Item
+                                            name={[field.name, 'lookupSourceField']}
+                                            label="فیلد کد/شناسه در فرم مبدا"
+                                            rules={[{ required: true }]}
+                                          >
+                                            <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
+                                          </Form.Item>
+                                        </>
                                       );
                                     }
                                     return null;
@@ -561,6 +598,7 @@ export default function Structure() {
                                                 { value: 'date', label: 'تاریخ' },
                                                 { value: 'select', label: 'انتخابی' },
                                                 { value: 'checkbox', label: 'چک‌باکس' },
+                                                { value: 'lookup', label: 'جستجو از فرم دیگر' },
                                               ]}
                                             />
                                           </Form.Item>
@@ -590,6 +628,29 @@ export default function Structure() {
                                                   >
                                                     <Input style={{ width: 280 }} placeholder="مثلاً: گزینه۱, گزینه۲, گزینه۳" />
                                                   </Form.Item>
+                                                );
+                                              }
+                                              if (type === 'lookup') {
+                                                return (
+                                                  <>
+                                                    <Form.Item
+                                                      name={[field.name, 'lookupFormId']}
+                                                      label="انتخاب فرم مبدا"
+                                                      rules={[{ required: true }]}
+                                                    >
+                                                      <Select
+                                                        style={{ width: 220 }}
+                                                        options={forms.map((f) => ({ value: f.id, label: f.name }))}
+                                                      />
+                                                    </Form.Item>
+                                                    <Form.Item
+                                                      name={[field.name, 'lookupSourceField']}
+                                                      label="فیلد کد/شناسه در فرم مبدا"
+                                                      rules={[{ required: true }]}
+                                                    >
+                                                      <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
+                                                    </Form.Item>
+                                                  </>
                                                 );
                                               }
                                               return null;
@@ -637,8 +698,8 @@ export default function Structure() {
               ]}
             />
           </Form.Item>
-        </Form>
-      </Modal>
-    </Card>
+        </Form >
+      </Modal >
+    </Card >
   );
 }
