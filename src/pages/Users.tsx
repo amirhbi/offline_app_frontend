@@ -346,7 +346,7 @@ export default function Users() {
           <Form.Item name="password" label="رمز عبور (در صورت تغییر)">
             <Input.Password placeholder="رمز عبور جدید" />
           </Form.Item>
-          <Form.Item name="forms" label="دسترسی بر عملیات فرم ها">
+          <Form.Item name="forms" label="دسترسی بر عملیات فرم ها ">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="forms_view" label="دسترسی نمایشی فرم ها" >
