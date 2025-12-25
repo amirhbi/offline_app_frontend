@@ -349,7 +349,7 @@ export default function Users() {
           <Form.Item name="forms" label="دسترسی بر عملیات فرم ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
-          <Form.Item name="forms_view" label="دسترسی نمایشی فرم ها">
+          <Form.Item name="forms_view" label="دسترسی نمایشی فرم ها" >
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
