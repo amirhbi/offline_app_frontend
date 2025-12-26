@@ -13,7 +13,9 @@ import {
   Checkbox,
   Modal,
   ColorPicker,
+  Tooltip,
 } from "antd";
+import { CheckCircleTwoTone } from "@ant-design/icons";
 import {
   DatePicker as DatePickerJalali,
   JalaliLocaleListener,
@@ -51,6 +53,9 @@ export default function FormData() {
   const [randomOrder, setRandomOrder] = useState(false);
   const [pdfLandscape, setPdfLandscape] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
+  const [existValidations, setExistValidations] = useState<
+    Record<string, Set<string>>
+  >({});
   // Export column selection state
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
   const [selectedExportColumnsByCategory, setSelectedExportColumnsByCategory] = useState<Record<string, string[]>>({});
@@ -144,6 +149,79 @@ export default function FormData() {
         };
     }
     return meta;
+  }, [formDef]);
+
+  // Fetch exist validations
+  useEffect(() => {
+    if (!formDef) return;
+    const existFields: {
+      lookupFormId: string;
+      lookupSourceField: string;
+      fieldKeys: string[];
+    }[] = [];
+
+    const processField = (f: FormField, key: string) => {
+      if (
+        f.type === "exist" &&
+        f.lookupFormId &&
+        f.lookupSourceField
+      ) {
+        // Find existing group for this formId+sourceField
+        let group = existFields.find(
+          (g) =>
+            g.lookupFormId === f.lookupFormId &&
+            g.lookupSourceField === f.lookupSourceField
+        );
+        if (!group) {
+          group = {
+            lookupFormId: f.lookupFormId,
+            lookupSourceField: f.lookupSourceField,
+            fieldKeys: [],
+          };
+          existFields.push(group);
+        }
+        group.fieldKeys.push(key);
+      }
+    };
+
+    for (const f of formDef.fields || []) {
+      processField(f, f.label);
+    }
+    for (const c of formDef.categories || []) {
+      for (const f of c.fields || []) {
+        processField(f, `${c.name} - ${f.label}`);
+      }
+    }
+
+    if (existFields.length === 0) return;
+
+    // Fetch data
+    const newValidations: Record<string, Set<string>> = {};
+    Promise.all(
+      existFields.map(async (group) => {
+        try {
+          const entries = await listFormEntries(group.lookupFormId);
+          const validValues = new Set<string>();
+          entries.forEach((e) => {
+            const v = e.data[group.lookupSourceField];
+            if (v !== undefined && v !== null && String(v).trim() !== "") {
+              validValues.add(String(v).trim());
+            }
+          });
+          group.fieldKeys.forEach((k) => {
+            newValidations[k] = validValues;
+          });
+        } catch (e) {
+          console.error("Error checking exist validations", e);
+        }
+      })
+    ).then(() => {
+      setExistValidations((prev) => ({ ...prev, ...newValidations }));
+    });
+
+    return () => {
+      setExistValidations({});
+    };
   }, [formDef]);
 
   // Helper: determine if a value should be considered meaningful/present for display/save
@@ -242,6 +320,56 @@ export default function FormData() {
               setInlineValues((p) => ({ ...p, [key]: e.target.checked }))
             }
           />
+        );
+      case "exist":
+        return (
+          <Space.Compact style={{ width: "100%" }}>
+            <Input.Search
+              value={value}
+              enterButton="بررسی"
+              placeholder="جستجو..."
+              onChange={(e) =>
+                setInlineValues((p) => ({ ...p, [key]: e.target.value }))
+              }
+              onSearch={async (val) => {
+                if (!val) return;
+                if (!meta.lookupFormId || !meta.lookupSourceField) {
+                  message.warning("تنظیمات بررسی ناقص است");
+                  return;
+                }
+                try {
+                  const results = await listFormEntries(meta.lookupFormId);
+                  const match = results.find(
+                    (r) => String(r.data[meta.lookupSourceField!]) === String(val)
+                  );
+                  if (match) {
+                    message.warning("این مقدار در فرم دیگر وجود دارد");
+                  } else {
+                    message.success("این مقدار در فرم دیگر یافت نشد");
+                  }
+                } catch (e) {
+                  message.error("خطا در بررسی");
+                }
+              }}
+            />
+            {value && existValidations[key]?.has(String(value)) && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0 8px",
+                  border: "1px solid #d9d9d9",
+                  borderLeft: "none",
+                  backgroundColor: "#f6ffed",
+                }}
+              >
+                <Tooltip title="مقدار تکراری">
+                  <CheckCircleTwoTone twoToneColor="#fea900ff" />
+                </Tooltip>
+              </div>
+            )}
+          </Space.Compact>
         );
       case "lookup":
         return (
@@ -550,12 +678,17 @@ export default function FormData() {
         render: (val: any, row: any) =>
           row.id === "__new__"
             ? renderInlineCell(f.label)
-            : fieldMeta[f.label]?.type === "checkbox"
-              ? typeof val === "boolean"
-                ? val
-                  ? "✓"
-                  : "✗"
-                : "—"
+            : fieldMeta[f.label]?.type === "exist"
+              ? (
+                <Space>
+                  {val}
+                  {val && existValidations[f.label]?.has(String(val)) && (
+                    <Tooltip title="تایید شده">
+                      <CheckCircleTwoTone twoToneColor="#52c41a" />
+                    </Tooltip>
+                  )}
+                </Space>
+              )
               : val,
       });
     }
@@ -582,7 +715,18 @@ export default function FormData() {
                     ? "✓"
                     : "✗"
                   : "—"
-                : val,
+                : fieldMeta[key]?.type === "exist"
+                  ? (
+                    <Space>
+                      {val}
+                      {val && existValidations[key]?.has(String(val)) && (
+                        <Tooltip title="مقدار تکراری">
+                          <CheckCircleTwoTone twoToneColor="#fea900ff" />
+                        </Tooltip>
+                      )}
+                    </Space>
+                  )
+                  : val,
         });
       }
     }
@@ -600,7 +744,7 @@ export default function FormData() {
       ...c,
       onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
     }));
-  }, [formDef, inlineValues]);
+  }, [formDef, inlineValues, existValidations]);
 
   const baseColumns = useMemo(() => {
     const cols: any[] = [];
@@ -625,6 +769,18 @@ export default function FormData() {
           const meta = fieldMeta[f.label];
           if (meta?.type === "checkbox") {
             return typeof val === "boolean" ? (val ? "✓" : "✗") : "—";
+          }
+          if (meta?.type === "exist") {
+            return (
+              <Space>
+                {val}
+                {val && existValidations[f.label]?.has(String(val)) && (
+                  <Tooltip title="مقدار تکراری">
+                    <CheckCircleTwoTone twoToneColor="#fea900ff" />
+                  </Tooltip>
+                )}
+              </Space>
+            );
           }
           return val;
         },
@@ -653,7 +809,7 @@ export default function FormData() {
       ...c,
       onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
     }));
-  }, [formDef, fieldMeta, exportView]);
+  }, [formDef, fieldMeta, exportView, existValidations]);
 
   const categoryTables = useMemo(() => {
     const tables: { name: string; columns: any[]; rows: FormEntryRecord[] }[] =
@@ -682,6 +838,18 @@ export default function FormData() {
             const meta = fieldMeta[key];
             if (meta?.type === "checkbox") {
               return typeof val === "boolean" ? (val ? "✓" : "—") : "—";
+            }
+            if (meta?.type === "exist") {
+              return (
+                <Space>
+                  {val}
+                  {val && existValidations[key]?.has(String(val)) && (
+                    <Tooltip title="مقدار تکراری">
+                      <CheckCircleTwoTone twoToneColor="#fea900ff" />
+                    </Tooltip>
+                  )}
+                </Space>
+              );
             }
             return val;
           },
@@ -732,7 +900,7 @@ export default function FormData() {
       });
     }
     return tables;
-  }, [formDef, entries, fieldMeta, exportView]);
+  }, [formDef, entries, fieldMeta, exportView, existValidations]);
 
   // Inline add columns: split into base and per-category rows
   const addBaseColumns = useMemo(() => {
@@ -760,6 +928,7 @@ export default function FormData() {
             defaultFormat={'hex'}
             format={'hex'}
             disabledAlpha
+            allowClear
             disabledFormat
             value={inlineValues["__color"] ?? undefined}
             onChange={(_, hex) => {
@@ -838,6 +1007,7 @@ export default function FormData() {
                 defaultFormat={'hex'}
                 format={'hex'}
                 disabledAlpha
+                allowClear
                 disabledFormat
                 onChange={(_, hex) =>
                   setInlineValues((p) => ({ ...p, [colorKey]: _.toHexString() }))
@@ -1560,7 +1730,7 @@ export default function FormData() {
       console.error(err);
       message.error("خطا در تولید PDF");
     } finally {
-      /* document.body.removeChild(container); */
+      document.body.removeChild(container);
     }
   };
 

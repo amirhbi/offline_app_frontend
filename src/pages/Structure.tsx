@@ -16,7 +16,7 @@ import {
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
-type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'lookup';
+type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'lookup' | 'exist';
 
 
 interface FormField {
@@ -349,6 +349,7 @@ export default function Structure() {
                             { value: 'select', label: 'انتخابی' },
                             { value: 'checkbox', label: 'چک‌باکس' },
                             { value: 'lookup', label: 'جستجو از فرم دیگر' },
+                            { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
                           ]}
                         />
                       </Form.Item>
@@ -383,7 +384,7 @@ export default function Structure() {
                               </Form.Item>
                             );
                           }
-                          if (type === 'lookup') {
+                          if (type === 'lookup' || type === 'exist') {
                             return (
                               <>
                                 <Form.Item
@@ -469,6 +470,7 @@ export default function Structure() {
                                       { value: 'select', label: 'انتخابی' },
                                       { value: 'checkbox', label: 'چک‌باکس' },
                                       { value: 'lookup', label: 'جستجو از فرم دیگر' },
+                                      { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
                                     ]}
                                   />
                                 </Form.Item>
@@ -499,7 +501,7 @@ export default function Structure() {
                                         </Form.Item>
                                       );
                                     }
-                                    if (type === 'lookup') {
+                                    if (type === 'lookup' || type === 'exist') {
                                       return (
                                         <>
                                           <Form.Item
@@ -599,6 +601,7 @@ export default function Structure() {
                                                 { value: 'select', label: 'انتخابی' },
                                                 { value: 'checkbox', label: 'چک‌باکس' },
                                                 { value: 'lookup', label: 'جستجو از فرم دیگر' },
+                                                { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
                                               ]}
                                             />
                                           </Form.Item>
@@ -630,7 +633,7 @@ export default function Structure() {
                                                   </Form.Item>
                                                 );
                                               }
-                                              if (type === 'lookup') {
+                                              if (type === 'lookup' || type === 'exist') {
                                                 return (
                                                   <>
                                                     <Form.Item

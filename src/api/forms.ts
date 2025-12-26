@@ -2,7 +2,7 @@ import { request } from './client';
 
 export type FormField = {
   label: string;
-  type: 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'lookup';
+  type: 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'lookup' | 'exist';
   required?: boolean;
   options?: string[];
   lookupFormId?: string;
