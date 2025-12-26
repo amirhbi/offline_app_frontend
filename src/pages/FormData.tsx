@@ -504,6 +504,7 @@ export default function FormData() {
       message.error(e?.message || "ثبت داده ناموفق بود");
     }
   };
+  
 
   const allColumns = useMemo(() => {
     const cols: any[] = [];
@@ -762,8 +763,10 @@ export default function FormData() {
             onChange={(_, hex) => {
               setInlineValues((p) => ({ ...p, __color: _.toHexString() }))
             }
-
             }
+            presets={[
+              { label: "رنگ های پیض فرض", colors: ["#ff8170", "#fcc266", "#fffd70", "#70ff99", "#70d9ff","#ff70d4", "#8370ff", "#e6e6e6" ] },
+            ]}
           />
         ) : (
           _val
@@ -837,6 +840,9 @@ export default function FormData() {
                 onChange={(_, hex) =>
                   setInlineValues((p) => ({ ...p, [colorKey]: _.toHexString() }))
                 }
+                presets={[
+                  { label: "رنگ های پیض فرض", colors: ["#ff8170", "#fcc266", "#fffd70", "#70ff99", "#70d9ff","#ff70d4", "#8370ff", "#e6e6e6" ] },
+                ]}
               />
             ) : (
               _val
