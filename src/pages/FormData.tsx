@@ -1492,7 +1492,7 @@ export default function FormData() {
         throw new Error("html2pdf function is not available");
       }
       const opt = {
-        margin: 1,
+        margin: [1, 1, 9, 1],
         filename: `${formDef.name}-entries.pdf`,
         image: { type: "jpeg", quality: 0.95 },
         html2canvas: {
