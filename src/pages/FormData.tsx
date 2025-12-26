@@ -49,6 +49,7 @@ export default function FormData() {
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [includeColors, setIncludeColors] = useState(true);
   const [randomOrder, setRandomOrder] = useState(false);
+  const [pdfLandscape, setPdfLandscape] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
   // Export column selection state
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
@@ -1036,11 +1037,12 @@ export default function FormData() {
       const wsBase = wb.addWorksheet("فیلدهای اصلی", { views: [{ rightToLeft: true }] });
       let baseHeaders = (formDef.fields || []).map((f) => f.label);
       if (filterCols) baseHeaders = baseHeaders.filter((lab) => selColsSet.has(lab));
-      wsBase.addRow(baseHeaders);
+      const headersWithIndex = ["ردیف", ...baseHeaders];
+      wsBase.addRow(headersWithIndex);
       const headerRow = wsBase.getRow(1);
       headerRow.font = { bold: true } as any;
       headerRow.alignment = { horizontal: "right" } as any;
-      wsBase.columns = baseHeaders.map((h) => ({ header: h, width: Math.max(12, Math.min(40, String(h).length + 6)) })) as any;
+      wsBase.columns = headersWithIndex.map((h) => ({ header: h, width: Math.max(12, Math.min(40, String(h).length + 6)) })) as any;
 
       let rIndex = 2;
       for (const e of targetEntries) {
@@ -1059,7 +1061,8 @@ export default function FormData() {
           }
           return v ?? "";
         });
-        wsBase.addRow(values);
+        const rowValues = [(rIndex - 1).toString(), ...values];
+        wsBase.addRow(rowValues);
         const row = wsBase.getRow(rIndex);
         row.alignment = { horizontal: "right" } as any;
         const argb = normalizeColorToArgb((e.data || {})["__color"]);
@@ -1084,7 +1087,8 @@ export default function FormData() {
           e.data.subFieldsData.length > 0
         ) {
           const subLabels = (formDef.subFields || []).map((sf) => sf.label);
-          wsBase.addRow(subLabels);
+          const subLabelsWithIndex = ["ردیف", ...subLabels];
+          wsBase.addRow(subLabelsWithIndex);
           const subHeaderRow = wsBase.getRow(rIndex);
           subHeaderRow.font = { italic: true, size: 10, color: { argb: "FF555555" } } as any;
           subHeaderRow.alignment = { horizontal: "right" } as any;
@@ -1097,6 +1101,7 @@ export default function FormData() {
           });
           rIndex++;
 
+          let subIdx = 1;
           for (const subItem of e.data.subFieldsData as any[]) {
             const subValues = (formDef.subFields || []).map((sf) => {
               const v = subItem[sf.label];
@@ -1106,7 +1111,9 @@ export default function FormData() {
               }
               return v ?? "";
             });
-            wsBase.addRow(subValues);
+            const subValuesWithIndex = [subIdx.toString(), ...subValues];
+            wsBase.addRow(subValuesWithIndex);
+            subIdx++;
             const subDataRow = wsBase.getRow(rIndex);
             subDataRow.font = { size: 10 } as any;
             subDataRow.alignment = { horizontal: "right" } as any;
@@ -1135,11 +1142,13 @@ export default function FormData() {
       } else if (filterCols) {
         catHeaders = catHeaders.filter((lab) => selColsSet.has(`${c.name} - ${lab}`));
       }
-      wsCat.addRow(catHeaders);
+      const catHeadersWithIndex = ["ردیف", ...catHeaders];
+      wsCat.addRow(catHeadersWithIndex);
       const headerRow = wsCat.getRow(1);
       headerRow.font = { bold: true } as any;
       headerRow.alignment = { horizontal: "right" } as any;
-      wsCat.columns = catHeaders.map((h) => ({ header: h, width: Math.max(12, Math.min(40, String(h).length + 6)) })) as any;
+      wsCat.columns = catHeadersWithIndex.map((h) => ({ header: h, width: Math.max(12, Math.min(40, String(h).length + 6)) })) as any;
+
 
       let rIndex = 2;
       for (const e of targetEntries) {
@@ -1159,7 +1168,8 @@ export default function FormData() {
           }
           return v ?? "";
         });
-        wsCat.addRow(values);
+        const rowValues = [(rIndex - 1).toString(), ...values];
+        wsCat.addRow(rowValues);
         const row = wsCat.getRow(rIndex);
         row.alignment = { horizontal: "right" } as any;
         const argb = normalizeColorToArgb((e.data || {})[`${c.name} - __color`]);
@@ -1217,7 +1227,7 @@ export default function FormData() {
     const container = document.createElement("div");
     container.style.pointerEvents = "none";
     container.style.zIndex = "0";
-    container.style.width = "800px";
+    container.style.width = pdfLandscape ? "1115px" : "785px";
     container.style.padding = "16px";
     container.style.background = "#fff";
     container.style.direction = "rtl";
@@ -1297,12 +1307,23 @@ export default function FormData() {
 
       const thead = document.createElement("thead");
       const trh = document.createElement("tr");
+      const thIndex = document.createElement("th");
+      thIndex.textContent = "ردیف";
+      thIndex.style.border = "1px solid #ccc";
+      thIndex.style.padding = "6px 8px";
+      thIndex.style.width = "50px";
+      thIndex.style.textAlign = "center";
+      thIndex.style.verticalAlign = "middle";
+      thIndex.style.backgroundColor = "#f7f7f7";
+      trh.appendChild(thIndex);
+
       labels.forEach((lab) => {
         const th = document.createElement("th");
         th.textContent = lab;
         th.style.border = "1px solid #ccc";
         th.style.padding = "6px 8px";
         th.style.textAlign = "right";
+        th.style.verticalAlign = "middle";
         th.style.backgroundColor = "#f7f7f7";
         trh.appendChild(th);
       });
@@ -1333,6 +1354,15 @@ export default function FormData() {
             tr.style.backgroundColor = String(color);
           }
         }
+        const tdIndex = document.createElement("td");
+        tdIndex.textContent = String(addedRows + 1);
+        tdIndex.style.border = "1px solid #ddd";
+        tdIndex.style.padding = "6px 8px";
+        tdIndex.style.width = "50px";
+        tdIndex.style.textAlign = "center";
+        tdIndex.style.verticalAlign = "middle";
+        tr.appendChild(tdIndex);
+
         labels.forEach((lab) => {
           const td = document.createElement("td");
           const v = valueOf(e, lab);
@@ -1347,6 +1377,7 @@ export default function FormData() {
           td.style.border = "1px solid #ddd";
           td.style.padding = "6px 8px";
           td.style.textAlign = "right";
+          td.style.verticalAlign = "middle";
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -1363,7 +1394,7 @@ export default function FormData() {
         ) {
           const subTr = document.createElement("tr");
           const subTd = document.createElement("td");
-          subTd.colSpan = labels.length;
+          subTd.colSpan = labels.length + 1;
           subTd.style.padding = "0 8px 12px 24px";
           subTd.style.backgroundColor = "#fafafa";
 
@@ -1376,12 +1407,23 @@ export default function FormData() {
 
           const subThead = document.createElement("thead");
           const subTrh = document.createElement("tr");
+          const subThIdx = document.createElement("th");
+          subThIdx.textContent = "ردیف";
+          subThIdx.style.border = "1px solid #eee";
+          subThIdx.style.padding = "4px 6px";
+          subThIdx.style.width = "50px";
+          subThIdx.style.textAlign = "center";
+          subThIdx.style.verticalAlign = "middle";
+          subThIdx.style.backgroundColor = "#eeeeee";
+          subTrh.appendChild(subThIdx);
+
           (formDef.subFields || []).forEach((sf) => {
             const th = document.createElement("th");
             th.textContent = sf.label;
             th.style.border = "1px solid #eee";
             th.style.padding = "4px 6px";
             th.style.textAlign = "right";
+            th.style.verticalAlign = "middle";
             th.style.backgroundColor = "#eeeeee";
             subTrh.appendChild(th);
           });
@@ -1389,8 +1431,17 @@ export default function FormData() {
           subTable.appendChild(subThead);
 
           const subTbody = document.createElement("tbody");
-          (e.data.subFieldsData as any[]).forEach((subRow) => {
+          (e.data.subFieldsData as any[]).forEach((subRow, subIdx) => {
             const rowTr = document.createElement("tr");
+            const rowTdIdx = document.createElement("td");
+            rowTdIdx.textContent = String(subIdx + 1);
+            rowTdIdx.style.border = "1px solid #eee";
+            rowTdIdx.style.padding = "4px 6px";
+            rowTdIdx.style.width = "50px";
+            rowTdIdx.style.textAlign = "center";
+            rowTdIdx.style.verticalAlign = "middle";
+            rowTr.appendChild(rowTdIdx);
+
             (formDef.subFields || []).forEach((sf) => {
               const rowTd = document.createElement("td");
               const val = subRow[sf.label];
@@ -1402,6 +1453,7 @@ export default function FormData() {
               rowTd.style.border = "1px solid #eee";
               rowTd.style.padding = "4px 6px";
               rowTd.style.textAlign = "right";
+              rowTd.style.verticalAlign = "middle";
               rowTr.appendChild(rowTd);
             });
             subTbody.appendChild(rowTr);
@@ -1498,7 +1550,7 @@ export default function FormData() {
         throw new Error("html2pdf function is not available");
       }
       const opt = {
-        margin: 2,
+        margin: 1,
         filename: `${formDef.name}-entries.pdf`,
         image: { type: "jpeg", quality: 0.95 },
         html2canvas: {
@@ -1559,14 +1611,14 @@ export default function FormData() {
           },
         },
         pagebreak: { mode: ["css", "legacy"] },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        jsPDF: { unit: "mm", format: "a4", orientation: pdfLandscape ? "landscape" : "portrait" },
       } as any;
       await html2pdfCandidate().from(container).set(opt).save();
     } catch (err) {
       console.error(err);
       message.error("خطا در تولید PDF");
     } finally {
-      document.body.removeChild(container);
+      /* document.body.removeChild(container); */
     }
   };
 
@@ -1649,6 +1701,12 @@ export default function FormData() {
                 onChange={(e) => setIncludeColors(e.target.checked)}
               >
                 خروجی با رنگ‌ها
+              </Checkbox>
+              <Checkbox
+                checked={pdfLandscape}
+                onChange={(e) => setPdfLandscape(e.target.checked)}
+              >
+                خروجی افقی pdf
               </Checkbox>
             </div>
 
