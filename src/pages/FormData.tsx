@@ -765,7 +765,7 @@ export default function FormData() {
             }
             }
             presets={[
-              { label: "رنگ های پیض فرض", colors: ["#ff8170", "#fcc266", "#fffd70", "#70ff99", "#70d9ff","#ff70d4", "#8370ff", "#e6e6e6" ] },
+              { label: "رنگ های پیش فرض", colors: ["#ff8170", "#fcc266", "#fffd70", "#70ff99", "#70d9ff","#ff70d4", "#8370ff", "#e6e6e6" ] },
             ]}
           />
         ) : (
@@ -841,7 +841,7 @@ export default function FormData() {
                   setInlineValues((p) => ({ ...p, [colorKey]: _.toHexString() }))
                 }
                 presets={[
-                  { label: "رنگ های پیض فرض", colors: ["#ff8170", "#fcc266", "#fffd70", "#70ff99", "#70d9ff","#ff70d4", "#8370ff", "#e6e6e6" ] },
+                  { label: "رنگ های پیش فرض", colors: ["#ff8170", "#fcc266", "#fffd70", "#70ff99", "#70d9ff","#ff70d4", "#8370ff", "#e6e6e6" ] },
                 ]}
               />
             ) : (
