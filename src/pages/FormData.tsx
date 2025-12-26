@@ -1734,6 +1734,354 @@ export default function FormData() {
     }
   };
 
+  const downloadHtml = async () => {
+    if (!formDef) return;
+    const targetEntries = selectedRowIds.length
+      ? entries.filter((e) => selectedRowIds.includes(e.id))
+      : selectAll
+        ? entries.slice()
+        : [];
+
+    if (!targetEntries.length) {
+      message.warning("هیچ رکوردی برای خروجی انتخاب نشده است");
+      return;
+    }
+    if (randomOrder) {
+      for (let i = targetEntries.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [targetEntries[i], targetEntries[j]] = [
+          targetEntries[j],
+          targetEntries[i],
+        ];
+      }
+    }
+
+    const filterCols = selectedExportColumns.length > 0;
+    const selColsSet = new Set(selectedExportColumns);
+
+    const container = document.createElement("div");
+    container.style.width = pdfLandscape ? "1115px" : "785px";
+    container.style.padding = "16px";
+    container.style.background = "#fff";
+    container.style.direction = "rtl";
+    container.style.margin = "0 auto";
+    container.style.fontFamily =
+      "system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif";
+    container.style.color = "#000";
+
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.justifyContent = "center";
+    header.style.alignItems = "center";
+    header.style.marginBottom = "12px";
+    const headerImg = document.createElement("img");
+    headerImg.src = String(logo);
+    headerImg.alt = "Logo";
+    headerImg.style.maxHeight = "60px";
+    headerImg.style.objectFit = "contain";
+    header.appendChild(headerImg);
+    container.appendChild(header);
+
+    if (formDef?.pdfDescription && String(formDef.pdfDescription).trim().length) {
+      const desc = document.createElement("p");
+      desc.textContent = String(formDef.pdfDescription);
+      desc.style.margin = "0 0 12px";
+      desc.style.fontSize = "13px";
+      desc.style.lineHeight = "1.6";
+      desc.style.textAlign = "right";
+      container.appendChild(desc);
+    }
+    if (formDef?.pdfImage) {
+      const imageMap: Record<string, string> = {
+        "fire_department.png": String(logo),
+        "react.svg": String(reactLogo),
+      };
+      const assetSrc = imageMap[String(formDef.pdfImage)] || "";
+      if (assetSrc) {
+        const contentImg = document.createElement("img");
+        contentImg.src = assetSrc;
+        contentImg.alt = "تصویر توضیح";
+        contentImg.style.maxWidth = "100%";
+        contentImg.style.maxHeight = "300px";
+        contentImg.style.objectFit = "contain";
+        contentImg.style.marginBottom = "12px";
+        contentImg.style.display = "block";
+        contentImg.style.marginLeft = "auto";
+        contentImg.style.marginRight = "auto";
+        container.appendChild(contentImg);
+      }
+    }
+
+    const makeSection = (
+      title: string,
+      labels: string[],
+      valueOf: (e: any, l: string) => any,
+      colorOf?: (e: any) => any,
+      metaKeyOf?: (l: string) => string,
+      isBaseSection: boolean = false
+    ) => {
+      if (!labels.length) return;
+      const section = document.createElement("section");
+      section.style.marginBottom = "16px";
+      const h2 = document.createElement("h2");
+      h2.textContent = title;
+      h2.style.margin = "0 0 8px";
+      h2.style.fontSize = "14px";
+      h2.style.textAlign = "right";
+      section.appendChild(h2);
+
+      const table = document.createElement("table");
+      table.style.width = "100%";
+      table.style.borderCollapse = "collapse";
+      table.style.direction = "rtl";
+
+      const thead = document.createElement("thead");
+      const trh = document.createElement("tr");
+      const thIndex = document.createElement("th");
+      thIndex.textContent = "ردیف";
+      thIndex.style.border = "1px solid #ccc";
+      thIndex.style.padding = "6px 8px";
+      thIndex.style.width = "50px";
+      thIndex.style.textAlign = "center";
+      thIndex.style.verticalAlign = "middle";
+      thIndex.style.backgroundColor = "#f7f7f7";
+      trh.appendChild(thIndex);
+
+      labels.forEach((lab) => {
+        const th = document.createElement("th");
+        th.textContent = lab;
+        th.style.border = "1px solid #ccc";
+        th.style.padding = "6px 8px";
+        th.style.textAlign = "right";
+        th.style.verticalAlign = "middle";
+        th.style.backgroundColor = "#f7f7f7";
+        trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      let addedRows = 0;
+      for (const e of targetEntries) {
+        const hasAny = labels.some((lab) => {
+          const metaKey = metaKeyOf ? metaKeyOf(lab) : lab;
+          const meta = fieldMeta[metaKey];
+          const v = valueOf(e, lab);
+          if (meta) return hasMeaningfulValue(meta.type, v);
+          if (v === null || v === undefined) return false;
+          if (typeof v === "string") return v.trim().length > 0;
+          if (Array.isArray(v)) return v.length > 0;
+          return true;
+        });
+
+        if (!hasAny) continue;
+
+        const tr = document.createElement("tr");
+        tr.style.textAlign = "right";
+        if (includeColors && colorOf) {
+          const color = colorOf(e);
+          if (color) {
+            tr.style.backgroundColor = String(color);
+          }
+        }
+        const tdIndex = document.createElement("td");
+        tdIndex.textContent = String(addedRows + 1);
+        tdIndex.style.border = "1px solid #ddd";
+        tdIndex.style.padding = "6px 8px";
+        tdIndex.style.width = "50px";
+        tdIndex.style.textAlign = "center";
+        tdIndex.style.verticalAlign = "middle";
+        tr.appendChild(tdIndex);
+
+        labels.forEach((lab) => {
+          const td = document.createElement("td");
+          const v = valueOf(e, lab);
+          const metaKey = metaKeyOf ? metaKeyOf(lab) : lab;
+          const meta = fieldMeta[metaKey];
+          let display = v;
+          if (meta && meta.type === "checkbox") {
+            const checked = v === true || v === "true" || v === 1 || v === "1";
+            display = checked ? "✓" : "";
+          }
+          td.textContent = display === null || display === undefined ? "" : String(display);
+          td.style.border = "1px solid #ddd";
+          td.style.padding = "6px 8px";
+          td.style.textAlign = "right";
+          td.style.verticalAlign = "middle";
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+        addedRows++;
+
+        if (
+          isBaseSection &&
+          formDef.subFields &&
+          formDef.subFields.length > 0 &&
+          e.data?.subFieldsData &&
+          Array.isArray(e.data.subFieldsData) &&
+          e.data.subFieldsData.length > 0
+        ) {
+          const subTr = document.createElement("tr");
+          const subTd = document.createElement("td");
+          subTd.colSpan = labels.length + 1;
+          subTd.style.padding = "0 8px 12px 24px";
+          subTd.style.backgroundColor = "#fafafa";
+
+          const subTable = document.createElement("table");
+          subTable.style.width = "100%";
+          subTable.style.borderCollapse = "collapse";
+          subTable.style.marginTop = "4px";
+          subTable.style.fontSize = "11px";
+          subTable.style.direction = "rtl";
+
+          const subThead = document.createElement("thead");
+          const subTrh = document.createElement("tr");
+          const subThIdx = document.createElement("th");
+          subThIdx.textContent = "ردیف";
+          subThIdx.style.border = "1px solid #eee";
+          subThIdx.style.padding = "4px 6px";
+          subThIdx.style.width = "50px";
+          subThIdx.style.textAlign = "center";
+          subThIdx.style.verticalAlign = "middle";
+          subThIdx.style.backgroundColor = "#eeeeee";
+          subTrh.appendChild(subThIdx);
+
+          (formDef.subFields || []).forEach((sf) => {
+            const th = document.createElement("th");
+            th.textContent = sf.label;
+            th.style.border = "1px solid #eee";
+            th.style.padding = "4px 6px";
+            th.style.textAlign = "right";
+            th.style.verticalAlign = "middle";
+            th.style.backgroundColor = "#eeeeee";
+            subTrh.appendChild(th);
+          });
+          subThead.appendChild(subTrh);
+          subTable.appendChild(subThead);
+
+          const subTbody = document.createElement("tbody");
+          (e.data.subFieldsData as any[]).forEach((subRow, subIdx) => {
+            const rowTr = document.createElement("tr");
+            const rowTdIdx = document.createElement("td");
+            rowTdIdx.textContent = String(subIdx + 1);
+            rowTdIdx.style.border = "1px solid #eee";
+            rowTdIdx.style.padding = "4px 6px";
+            rowTdIdx.style.width = "50px";
+            rowTdIdx.style.textAlign = "center";
+            rowTdIdx.style.verticalAlign = "middle";
+            rowTr.appendChild(rowTdIdx);
+
+            (formDef.subFields || []).forEach((sf) => {
+              const rowTd = document.createElement("td");
+              const val = subRow[sf.label];
+              let disp = val;
+              if (sf.type === "checkbox") {
+                disp = val === true || val === "true" || val === 1 || val === "1" ? "✓" : "";
+              }
+              rowTd.textContent = disp === null || disp === undefined ? "" : String(disp);
+              rowTd.style.border = "1px solid #eee";
+              rowTd.style.padding = "4px 6px";
+              rowTd.style.textAlign = "right";
+              rowTd.style.verticalAlign = "middle";
+              rowTr.appendChild(rowTd);
+            });
+            subTbody.appendChild(rowTr);
+          });
+          subTable.appendChild(subTbody);
+          subTd.appendChild(subTable);
+          subTr.appendChild(subTd);
+          tbody.appendChild(subTr);
+        }
+      }
+
+      if (addedRows > 0) {
+        table.appendChild(tbody);
+        section.appendChild(table);
+        container.appendChild(section);
+      }
+    };
+
+    const baseInit = (formDef.fields || []).map((f) => f.label);
+    const baseLabels = filterCols ? baseInit.filter((lab) => selColsSet.has(lab)) : baseInit;
+    makeSection(
+      "",
+      baseLabels,
+      (e, lab) => (e.data || {})[lab] ?? "",
+      (e) => (e.data || {})["__color"],
+      undefined,
+      true
+    );
+
+    for (const c of formDef.categories || []) {
+      const catInit = (c.fields || []).map((f) => f.label);
+      const catSel = selectedExportColumnsByCategory[c.name];
+      let catLabels = catInit;
+      if (catSel && catSel.length > 0) {
+        const catSet = new Set(catSel);
+        catLabels = catInit.filter((lab) => catSet.has(`${c.name} - ${lab}`));
+      } else if (filterCols) {
+        catLabels = catInit.filter((lab) => selColsSet.has(`${c.name} - ${lab}`));
+      }
+      makeSection(
+        c.name,
+        catLabels,
+        (e, lab) => (e.data || {})[`${c.name} - ${lab}`] ?? "",
+        (e) => (e.data || {})[`${c.name} - __color`],
+        (lab) => `${c.name} - ${lab}`,
+        false
+      );
+    }
+
+    if (!container.children.length) {
+      message.warning("هیچ داده‌ای برای خروجی HTML یافت نشد");
+      return;
+    }
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>${formDef.name}</title>
+    <style>
+        @font-face {
+            font-family: 'Vazirmatn';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+        }
+        body {
+            font-family: 'Vazirmatn', system-ui, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; background: #fff; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background-color: #f4f4f4; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; }
+        @media print {
+            body { background: none; padding: 0; }
+            .container { box-shadow: none; border: none; width: 100%; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        ${container.innerHTML}
+    </div>
+</body>
+</html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${formDef.name}-entries.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+
   const startInlineAdd = () => {
     if (!formDef) return;
     setEditingEntryId(null);
@@ -1828,6 +2176,7 @@ export default function FormData() {
                 دانلود XLSX
               </Button>
               <Button onClick={downloadPdf}>دانلود PDF</Button>
+              <Button onClick={downloadHtml}>دانلود HTML</Button>
               <Button
                 onClick={() => {
                   setExportView(false);
