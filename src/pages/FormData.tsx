@@ -1774,12 +1774,6 @@ export default function FormData() {
     header.style.justifyContent = "center";
     header.style.alignItems = "center";
     header.style.marginBottom = "12px";
-    const headerImg = document.createElement("img");
-    headerImg.src = String(logo);
-    headerImg.alt = "Logo";
-    headerImg.style.maxHeight = "60px";
-    headerImg.style.objectFit = "contain";
-    header.appendChild(headerImg);
     container.appendChild(header);
 
     if (formDef?.pdfDescription && String(formDef.pdfDescription).trim().length) {
@@ -1790,26 +1784,6 @@ export default function FormData() {
       desc.style.lineHeight = "1.6";
       desc.style.textAlign = "right";
       container.appendChild(desc);
-    }
-    if (formDef?.pdfImage) {
-      const imageMap: Record<string, string> = {
-        "fire_department.png": String(logo),
-        "react.svg": String(reactLogo),
-      };
-      const assetSrc = imageMap[String(formDef.pdfImage)] || "";
-      if (assetSrc) {
-        const contentImg = document.createElement("img");
-        contentImg.src = assetSrc;
-        contentImg.alt = "تصویر توضیح";
-        contentImg.style.maxWidth = "100%";
-        contentImg.style.maxHeight = "300px";
-        contentImg.style.objectFit = "contain";
-        contentImg.style.marginBottom = "12px";
-        contentImg.style.display = "block";
-        contentImg.style.marginLeft = "auto";
-        contentImg.style.marginRight = "auto";
-        container.appendChild(contentImg);
-      }
     }
 
     const makeSection = (
