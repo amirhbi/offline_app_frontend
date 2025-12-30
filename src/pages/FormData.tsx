@@ -74,6 +74,11 @@ export default function FormData() {
     return map;
   }, [formDef]);
 
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewItems, setViewItems] = useState<{ label: string; value: any }[]>([]);
+  const [viewSubRows, setViewSubRows] = useState<Record<string, any>[]>([]);
+  const [viewTitle, setViewTitle] = useState<string>("");
+
   // Default: select all columns when options become available
   useEffect(() => {
     if (exportColumnOptions.length > 0 && selectedExportColumns.length === 0) {
@@ -523,6 +528,45 @@ export default function FormData() {
     );
   };
 
+  const handleView = (row: any, categoryName?: string) => {
+    if (!formDef) return;
+    const items: { label: string; value: any }[] = [];
+    if (!categoryName) {
+      for (const f of (formDef.fields ?? []) as FormField[]) {
+        const v = row?.data?.[f.label];
+        const meta = fieldMeta[f.label];
+        let display = v;
+        if (meta && meta.type === "checkbox") {
+          const checked = v === true || v === "true" || v === 1 || v === "1";
+          display = checked ? "✓" : "✗";
+        }
+        items.push({ label: f.label, value: display });
+      }
+      const sub = (row?.data?.subFieldsData || []) as Record<string, any>[];
+      setViewSubRows(Array.isArray(sub) ? sub : []);
+      setViewTitle("مشاهده رکورد");
+    } else {
+      const cat = (formDef.categories || []).find((c) => c.name === categoryName);
+      if (cat) {
+        for (const f of (cat.fields ?? []) as FormField[]) {
+          const key = `${cat.name} - ${f.label}`;
+          const v = row?.data?.[key];
+          const meta = fieldMeta[key];
+          let display = v;
+          if (meta && meta.type === "checkbox") {
+            const checked = v === true || v === "true" || v === 1 || v === "1";
+            display = checked ? "✓" : "✗";
+          }
+          items.push({ label: f.label, value: display });
+        }
+      }
+      setViewSubRows([]);
+      setViewTitle(categoryName);
+    }
+    setViewItems(items);
+    setViewOpen(true);
+  };
+
   const handleDelete = (row: any) => {
     Modal.confirm({
       title: "حذف رکورد",
@@ -796,6 +840,7 @@ export default function FormData() {
         align: "left",
         render: (_: any, row: any) => (
           <Space>
+            <Button onClick={() => handleView(row, undefined)}>نمایش</Button>
             <Button onClick={() => handleDuplicate(row, undefined)}>کپی</Button>
             <Button onClick={() => handleEdit(row, undefined)}>ویرایش</Button>
             <Button danger onClick={() => handleDelete(row)}>
@@ -865,6 +910,7 @@ export default function FormData() {
           align: "left",
           render: (_: any, row: any) => (
             <Space>
+              <Button onClick={() => handleView(row, c.name)}>نمایش</Button>
               <Button onClick={() => handleDuplicate(row, c.name)}>کپی</Button>
               <Button onClick={() => handleEdit(row, c.name)}>ویرایش</Button>
               <Button danger onClick={() => handleDelete(row)}>
@@ -2090,6 +2136,53 @@ export default function FormData() {
 
   return (
     <Card className="border border-red-300">
+      <Modal
+        open={viewOpen}
+        title={viewTitle || "مشاهده رکورد"}
+        onCancel={() => setViewOpen(false)}
+        footer={<Button onClick={() => setViewOpen(false)}>بستن</Button>}
+        width={900}
+      >
+        <Table
+          rowKey="label"
+          className="mt-8"
+          dataSource={viewItems}
+          columns={[
+            { title: "فیلد", dataIndex: "label", key: "label", width: 200 },
+            { title: "مقدار", dataIndex: "value", key: "value" },
+          ] as any}
+          pagination={false}
+          size="small"
+          bordered
+        />
+        {viewSubRows.length > 0 && (
+          <>
+            <Typography.Title level={5} className="!mt-4 !mb-2">
+              زیرفیلدها
+            </Typography.Title>
+            <Table
+              rowKey={(_, idx) => `sub-${idx}`}
+              dataSource={viewSubRows}
+              columns={(formDef?.subFields || []).map((sf) => ({
+                title: sf.label,
+                dataIndex: sf.label,
+                key: sf.label,
+                render: (val: any) =>
+                  sf.type === "checkbox"
+                    ? typeof val === "boolean"
+                      ? val
+                        ? "✓"
+                        : "✗"
+                      : "—"
+                    : val,
+              })) as any}
+              pagination={false}
+              size="small"
+              bordered
+            />
+          </>
+        )}
+      </Modal>
       <Space
         style={{ width: "100%", justifyContent: "space-between" }}
         className="mb-4"
