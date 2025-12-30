@@ -443,44 +443,43 @@ export default function FormData() {
       message.warning("در حال افزودن رکورد جدید هستید");
       return;
     }
-    const initial: Record<string, any> = {};
-    // Base fields
-    for (const f of (formDef.fields ?? []) as FormField[]) {
-      const v = row?.data?.[f.label];
-      if (f.type === "date" && v)
-        initial[f.label] = (dayjs as any)(v, { jalali: true });
-      else if (f.type === "checkbox") initial[f.label] = !!v;
-      else initial[f.label] = v ?? "";
-    }
-    // Category fields
-    for (const c of formDef.categories || []) {
-      for (const f of (c.fields ?? []) as FormField[]) {
-        const key = `${c.name} - ${f.label}`;
-        const v = row?.data?.[key];
-        if (f.type === "date" && v)
-          initial[key] = (dayjs as any)(v, { jalali: true });
-        else if (f.type === "checkbox") initial[key] = !!v;
-        else if (f.type === "select") initial[key] = v ?? undefined;
-        else initial[key] = v ?? "";
+    if (categoryName) {
+      const cat = (formDef.categories || []).find((c) => c.name === categoryName);
+      const initial: Record<string, any> = {};
+      if (cat) {
+        for (const f of (cat.fields ?? []) as FormField[]) {
+          const key = `${cat.name} - ${f.label}`;
+          const v = row?.data?.[key];
+          if (f.type === "date" && v)
+            initial[key] = (dayjs as any)(v, { jalali: true });
+          else if (f.type === "checkbox") initial[key] = !!v;
+          else if (f.type === "select") initial[key] = v ?? undefined;
+          else initial[key] = v ?? "";
+        }
+        const colorKey = `${cat.name} - __color`;
+        initial[colorKey] = row?.data?.[colorKey] ?? undefined;
       }
+      setInlineValues(initial);
+      setSubFieldsData([]);
+      setEditingEntryId(null);
+      setInlineAdd(true);
+      setInlineScope({ type: "category", category: categoryName });
+    } else {
+      const initial: Record<string, any> = {};
+      for (const f of (formDef.fields ?? []) as FormField[]) {
+        const v = row?.data?.[f.label];
+        if (f.type === "date" && v)
+          initial[f.label] = (dayjs as any)(v, { jalali: true });
+        else if (f.type === "checkbox") initial[f.label] = !!v;
+        else initial[f.label] = v ?? "";
+      }
+      initial["__color"] = row?.data?.["__color"] ?? undefined;
+      setInlineValues(initial);
+      setSubFieldsData((row?.data?.subFieldsData || []) as Record<string, any>[]);
+      setEditingEntryId(null);
+      setInlineAdd(true);
+      setInlineScope({ type: "base" });
     }
-    // Extra: category color fields
-    for (const c of formDef.categories || []) {
-      const colorKey = `${c.name} - __color`;
-      initial[colorKey] = row?.data?.[colorKey] ?? undefined;
-    }
-    // Extra color field
-    initial["__color"] = row?.data?.["__color"] ?? undefined;
-    setInlineValues(initial);
-    // Load subFieldsData if exists (duplicate)
-    setSubFieldsData((row?.data?.subFieldsData || []) as Record<string, any>[]);
-    setEditingEntryId(null);
-    setInlineAdd(true);
-    setInlineScope(
-      categoryName
-        ? { type: "category", category: categoryName }
-        : { type: "base" }
-    );
   };
 
   const handleEdit = (row: any, categoryName?: string) => {
@@ -567,17 +566,68 @@ export default function FormData() {
     setViewOpen(true);
   };
 
-  const handleDelete = (row: any) => {
+  const handleDelete = (row: any, categoryName?: string) => {
+    const isCategoryDelete = !!categoryName;
     Modal.confirm({
-      title: "حذف رکورد",
-      content: "آیا از حذف این رکورد مطمئن هستید؟",
+      title: isCategoryDelete ? "حذف رکورد در این دسته" : "حذف رکورد",
+      content: isCategoryDelete
+        ? "آیا از حذف داده‌های این دسته برای این رکورد مطمئن هستید؟"
+        : "آیا از حذف کامل این رکورد مطمئن هستید؟",
       okText: "حذف",
       okType: "danger",
       cancelText: "انصراف",
       onOk: async () => {
         try {
-          await deleteFormEntry(formId as string, row.id);
-          message.success("رکورد حذف شد");
+          if (!formDef || !formId) return;
+          if (!isCategoryDelete) {
+            await deleteFormEntry(formId as string, row.id);
+            message.success("رکورد حذف شد");
+            load();
+            return;
+          }
+          const cat = (formDef.categories || []).find((c) => c.name === categoryName);
+          const updatedData: Record<string, any> = { ...(row?.data || {}) };
+          if (cat) {
+            for (const f of (cat.fields || []) as FormField[]) {
+              const key = `${cat.name} - ${f.label}`;
+              delete updatedData[key];
+            }
+            delete updatedData[`${cat.name} - __color`];
+          }
+          let hasAny = false;
+          for (const f of (formDef.fields || []) as FormField[]) {
+            const v = updatedData[f.label];
+            if (hasMeaningfulValue(f.type, v)) {
+              hasAny = true;
+              break;
+            }
+          }
+          if (!hasAny) {
+            for (const c of formDef.categories || []) {
+              if (c.name === categoryName) continue;
+              for (const f of (c.fields || []) as FormField[]) {
+                const v = updatedData[`${c.name} - ${f.label}`];
+                if (hasMeaningfulValue(f.type, v)) {
+                  hasAny = true;
+                  break;
+                }
+              }
+              if (hasAny) break;
+            }
+          }
+          if (!hasAny) {
+            const sub = updatedData["subFieldsData"];
+            if (Array.isArray(sub) && sub.length > 0) {
+              hasAny = true;
+            }
+          }
+          if (!hasAny) {
+            await deleteFormEntry(formId as string, row.id);
+            message.success("به‌دلیل نبود داده دیگر، کل رکورد حذف شد");
+          } else {
+            await updateFormEntry(formId as string, row.id, { data: updatedData });
+            message.success("داده‌های این دسته حذف شد");
+          }
           load();
         } catch (e: any) {
           message.error(e?.message || "حذف رکورد ناموفق بود");
@@ -913,7 +963,7 @@ export default function FormData() {
               <Button onClick={() => handleView(row, c.name)}>نمایش</Button>
               <Button onClick={() => handleDuplicate(row, c.name)}>کپی</Button>
               <Button onClick={() => handleEdit(row, c.name)}>ویرایش</Button>
-              <Button danger onClick={() => handleDelete(row)}>
+              <Button danger onClick={() => handleDelete(row, c.name)}>
                 حذف
               </Button>
             </Space>
