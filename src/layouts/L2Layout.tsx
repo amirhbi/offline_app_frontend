@@ -42,7 +42,7 @@ export default function L2Layout() {
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 600 }}>خوش آمدید، مدیر_بخش_اطفاء (L2)</div>
+          <div style={{ fontWeight: 600 }}>خوش آمدید</div>
           <Button icon={<LogoutOutlined />} onClick={() => { signOut(); navigate('/login'); }}>
             خروج
           </Button>

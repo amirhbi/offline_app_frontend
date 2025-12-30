@@ -40,7 +40,7 @@ export default function L3Layout() {
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 600 }}>خوش آمدید، ویرایشگر_اطفاء (L3)</div>
+          <div style={{ fontWeight: 600 }}>خوش آمدید</div>
           <Button icon={<LogoutOutlined />} onClick={() => { signOut(); navigate('/login'); }}>
             خروج
           </Button>

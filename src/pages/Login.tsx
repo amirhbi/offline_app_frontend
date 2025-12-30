@@ -7,14 +7,21 @@ import logo from '../assets/fire_department.png';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn } = useAuth();
+  const { signIn, role } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const from = (location.state as any)?.from?.pathname || '/dashboard';
 
   const onFinish = async (values: { username: string; password: string }) => {
-    const ok = await signIn(values.username, values.password);
-    if (ok) {
-      navigate(from, { replace: true });
+    const res = await signIn(values.username, values.password);
+    if (res.ok) {
+      const userRole = res.role ?? role;
+      if (userRole === 'admin') {
+        navigate('/l2', { replace: true });
+      } else if (userRole === 'L3') {
+        navigate('/l3', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } else {
       setError('نام کاربری یا رمز عبور نادرست است');
     }
