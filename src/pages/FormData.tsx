@@ -15,7 +15,7 @@ import {
   ColorPicker,
   Tooltip,
 } from "antd";
-import { CheckCircleTwoTone } from "@ant-design/icons";
+import { CloseCircleTwoTone } from "@ant-design/icons";
 import {
   DatePicker as DatePickerJalali,
   JalaliLocaleListener,
@@ -370,7 +370,7 @@ export default function FormData() {
                 }}
               >
                 <Tooltip title="مقدار تکراری">
-                  <CheckCircleTwoTone twoToneColor="#fea900ff" />
+                  <CloseCircleTwoTone twoToneColor="#fea900ff" />
                 </Tooltip>
               </div>
             )}
@@ -728,7 +728,7 @@ export default function FormData() {
                   {val}
                   {val && existValidations[f.label]?.has(String(val)) && (
                     <Tooltip title="تایید شده">
-                      <CheckCircleTwoTone twoToneColor="#52c41a" />
+                      <CloseCircleTwoTone twoToneColor="#52c41a" />
                     </Tooltip>
                   )}
                 </Space>
@@ -765,7 +765,7 @@ export default function FormData() {
                       {val}
                       {val && existValidations[key]?.has(String(val)) && (
                         <Tooltip title="مقدار تکراری">
-                          <CheckCircleTwoTone twoToneColor="#fea900ff" />
+                          <CloseCircleTwoTone twoToneColor="#fea900ff" />
                         </Tooltip>
                       )}
                     </Space>
@@ -820,7 +820,7 @@ export default function FormData() {
                 {val}
                 {val && existValidations[f.label]?.has(String(val)) && (
                   <Tooltip title="مقدار تکراری">
-                    <CheckCircleTwoTone twoToneColor="#fea900ff" />
+                    <CloseCircleTwoTone twoToneColor="#fea900ff" />
                   </Tooltip>
                 )}
               </Space>
@@ -890,7 +890,7 @@ export default function FormData() {
                   {val}
                   {val && existValidations[key]?.has(String(val)) && (
                     <Tooltip title="مقدار تکراری">
-                      <CheckCircleTwoTone twoToneColor="#fea900ff" />
+                      <CloseCircleTwoTone twoToneColor="#fea900ff" />
                     </Tooltip>
                   )}
                 </Space>
