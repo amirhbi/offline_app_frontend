@@ -20,7 +20,7 @@ export default function L2Layout() {
 
   const items = [
     { key: 'dashboard', icon: <DashboardOutlined />, label: 'داشبورد بخشی' },
-    { key: 'l3-users', icon: <TeamOutlined />, label: 'مدیریت کاربران (L3)' },
+    { key: 'l3-users', icon: <TeamOutlined />, label: 'مدیریت کاربران (l3)' },
     { key: 'data', icon: <DatabaseOutlined />, label: 'مدیریت داده‌ها' },
     { key: 'reports', icon: <FileTextOutlined />, label: 'گزارش‌گیری بخشی' },
     { key: 'export', icon: <CloudDownloadOutlined />, label: 'خروجی گیری' },

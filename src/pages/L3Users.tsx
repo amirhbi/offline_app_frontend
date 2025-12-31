@@ -28,10 +28,10 @@ export default function L3Users() {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await listUsers('L3');
+        const data = await listUsers('l3');
         setUsers(data);
       } catch (err: any) {
-        message.error(err?.message || 'خطا در دریافت کاربران L3');
+        message.error(err?.message || 'خطا در دریافت کاربران l3');
       } finally {
         setLoading(false);
       }
@@ -56,7 +56,7 @@ export default function L3Users() {
       const values = await createForm.validateFields();
       const payload = {
         username: values.username,
-        role: 'L3' as const,
+        role: 'l3' as const,
         forms: values.forms || [],
         forms_view: values.forms_view || [],
         reports: values.reports || [],
@@ -66,9 +66,9 @@ export default function L3Users() {
       setUsers((prev) => [created, ...prev]);
       setCreateOpen(false);
       createForm.resetFields();
-      message.success('کاربر L3 جدید ایجاد شد');
+      message.success('کاربر l3 جدید ایجاد شد');
     } catch (err: any) {
-      message.error(err?.message || 'ایجاد کاربر L3 ناموفق بود');
+      message.error(err?.message || 'ایجاد کاربر l3 ناموفق بود');
     }
   };
 
@@ -102,9 +102,9 @@ export default function L3Users() {
       setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updated : u)));
       setEditOpen(false);
       setEditingUser(null);
-      message.success('ویرایش کاربر L3 انجام شد');
+      message.success('ویرایش کاربر l3 انجام شد');
     } catch (err: any) {
-      message.error(err?.message || 'ویرایش کاربر L3 ناموفق بود');
+      message.error(err?.message || 'ویرایش کاربر l3 ناموفق بود');
     }
   };
 
@@ -112,9 +112,9 @@ export default function L3Users() {
     try {
       await deleteUser(id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
-      message.success('کاربر L3 حذف شد');
+      message.success('کاربر l3 حذف شد');
     } catch (err: any) {
-      message.error(err?.message || 'حذف کاربر L3 ناموفق بود');
+      message.error(err?.message || 'حذف کاربر l3 ناموفق بود');
     }
   };
 
@@ -122,12 +122,12 @@ export default function L3Users() {
     <Card className="border border-red-300">
       <Space style={{ width: '100%', justifyContent: 'space-between' }} className="mb-4">
         <Typography.Title level={4} className="!mb-0 text-red-600">
-          مدیریت کاربران (L3)
+          مدیریت کاربران (l3)
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>ایجاد کاربر L3 جدید</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>ایجاد کاربر l3 جدید</Button>
       </Space>
       <Typography.Paragraph className="mt-0">
-        ایجاد، ویرایش و حذف حساب‌های کاربری اپراتورهای سطح ۳ (L3).
+        ایجاد، ویرایش و حذف حساب‌های کاربری اپراتورهای سطح ۳ (l3).
       </Typography.Paragraph>
       <Table<L3UserRow>
         dataSource={users}
@@ -135,7 +135,7 @@ export default function L3Users() {
         loading={loading}
         pagination={false}
         columns={[
-          { title: 'نام کاربری L3', dataIndex: 'username' },
+          { title: 'نام کاربری l3', dataIndex: 'username' },
           { title: 'سطح', dataIndex: 'role' },
           {
             title: 'دسترسی فرم‌ها',
@@ -195,7 +195,7 @@ export default function L3Users() {
       {/* Create Modal */}
       <Modal
         open={createOpen}
-        title="ایجاد کاربر L3 جدید"
+        title="ایجاد کاربر l3 جدید"
         okText="ایجاد"
         cancelText="انصراف"
         onCancel={() => setCreateOpen(false)}
@@ -220,7 +220,7 @@ export default function L3Users() {
       {/* Edit Modal */}
       <Modal
         open={editOpen}
-        title="ویرایش دسترسی کاربر L3"
+        title="ویرایش دسترسی کاربر l3"
         okText="ذخیره"
         cancelText="انصراف"
         onCancel={() => { setEditOpen(false); setEditingUser(null); }}

@@ -17,7 +17,7 @@ export default function Login() {
       const userRole = res.role ?? role;
       if (userRole === 'admin') {
         navigate('/l2', { replace: true });
-      } else if (userRole === 'L3') {
+      } else if (userRole === 'l3') {
         navigate('/l3', { replace: true });
       } else {
         navigate(from, { replace: true });

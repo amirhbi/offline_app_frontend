@@ -28,7 +28,7 @@ export default function L3Layout() {
     <Layout style={{ minHeight: '100vh' }}>
       <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
         <div style={{ height: 48, margin: 16, color: '#fff', fontWeight: 600 }}>
-          {collapsed ? 'L3' : 'پنل L3'}
+          {collapsed ? 'l3' : 'پنل l3'}
         </div>
         <Menu
           theme="dark"
