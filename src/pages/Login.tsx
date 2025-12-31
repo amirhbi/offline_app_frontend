@@ -7,14 +7,14 @@ import logo from '../assets/fire_department.png';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, role } = useAuth();
+  const { signIn, userData, role } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const from = (location.state as any)?.from?.pathname || '/dashboard';
 
   const onFinish = async (values: { username: string; password: string }) => {
     const res = await signIn(values.username, values.password);
     if (res.ok) {
-      const userRole = res.role ?? role;
+      const userRole = res.role ?? userData?.role;
       if (userRole === 'l2') {
         navigate('/l2', { replace: true });
       } else if (userRole === 'l3') {

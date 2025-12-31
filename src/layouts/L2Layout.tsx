@@ -9,7 +9,7 @@ const { Header, Sider, Content } = Layout;
 export default function L2Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, userData } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string>('dashboard');
 
@@ -42,7 +42,7 @@ export default function L2Layout() {
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 600 }}>خوش آمدید</div>
+          <div style={{ fontWeight: 600 }}>خوش آمدید، {(userData?.nickname || userData?.username || 'کاربر')} (L2)</div>
           <Button icon={<LogoutOutlined />} onClick={() => { signOut(); navigate('/login'); }}>
             خروج
           </Button>
