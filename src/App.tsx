@@ -39,7 +39,7 @@ export default function App() {
           <Route index element={<Navigate to="/l2/dashboard" replace />} />
           <Route path="dashboard" element={<L2Dashboard />} />
           <Route path="l3-users" element={<L3Users />} />
-          <Route path="data" element={<FormData />} />
+          <Route path="data" element={<Structure />} />
           <Route path="reports" element={<L2Reports />} />
           <Route path="export" element={<L2Export />} />
         </Route>
@@ -53,7 +53,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/l3/dashboard" replace />} />
           <Route path="dashboard" element={<L3Dashboard />} />
-          <Route path="data-entry" element={<L3DataEntry />} />
+          <Route path="data" element={<Structure />} />
           <Route path="export" element={<L3Export />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

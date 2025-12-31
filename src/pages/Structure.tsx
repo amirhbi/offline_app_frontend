@@ -15,6 +15,8 @@ import {
   Switch,
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { listForms } from '../api/forms';
 
 type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'lookup' | 'exist';
 
@@ -50,14 +52,15 @@ const API_BASE = '/api';
 
 export default function Structure() {
   const navigate = useNavigate();
+  const { userData } = useAuth();
+  const isSuperAdmin = (userData?.role === 'super_admin');
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingForm, setEditingForm] = useState<FormDefinition | null>(null);
   const [form] = Form.useForm();
 
   const fetchForms = async () => {
-    const res = await fetch(`${API_BASE}/forms`);
-    const data = await res.json();
+    const data = await listForms();
     const mapped: FormDefinition[] = (data || []).map((f: any) => ({
       id: f._id ?? f.id,
       name: f.name,
@@ -232,10 +235,14 @@ export default function Structure() {
       render: (_: any, rec: FormDefinition) => (
         <Space>
           <Button onClick={() => navigate(`/structure/data/${rec.id}`)}>نمایش داده ها</Button>
-          <Button onClick={() => openEdit(rec)}>ویرایش</Button>
-          <Popconfirm title="حذف فرم؟" onConfirm={() => deleteForm(rec.id)}>
-            <Button danger>حذف</Button>
-          </Popconfirm>
+          {isSuperAdmin && (
+            <>
+              <Button onClick={() => openEdit(rec)}>ویرایش</Button>
+              <Popconfirm title="حذف فرم؟" onConfirm={() => deleteForm(rec.id)}>
+                <Button danger>حذف</Button>
+              </Popconfirm>
+            </>
+          )}
         </Space>
       ),
     },
@@ -249,9 +256,11 @@ export default function Structure() {
         </Typography.Title>
 
         <Space className="mb-3">
-          <Button type="primary" onClick={openCreate}>
-            ایجاد فرم جدید
-          </Button>
+          {isSuperAdmin && (
+            <Button type="primary" onClick={openCreate}>
+              ایجاد فرم جدید
+            </Button>
+          )}
         </Space>
       </div>
 
