@@ -4,7 +4,7 @@ export type UserRecord = {
   id: string;
   username: string;
   nickname?: string;
-  role: 'admin' | 'l3';
+  role: 'l2' | 'l3';
   password?: string;
   forms: string[];
   forms_view: string[];
@@ -20,7 +20,7 @@ function mapUser(u: ServerUser): UserRecord {
   return { id: _id, ...rest };
 }
 
-export async function listUsers(role?: 'admin' | 'l3'): Promise<UserRecord[]> {
+export async function listUsers(role?: 'l2' | 'l3'): Promise<UserRecord[]> {
   const q = role ? `?role=${encodeURIComponent(role)}` : '';
   const data = await request<ServerUser[]>(`/users${q}`);
   return data.map(mapUser);

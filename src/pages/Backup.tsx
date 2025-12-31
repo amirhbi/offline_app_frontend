@@ -397,7 +397,7 @@ export default function Backup() {
                   pagination={{ pageSize: 8 }}
                   columns={[
                     { title: "کاربر", key: "user", render: (_: any, r: UserRecord) => r.nickname?.trim() ? r.nickname : r.username },
-                    { title: "نقش", dataIndex: "role", key: "role", render: (role: string) => (role === 'admin' ? 'ادمین' : 'l3') },
+                    { title: "نقش", dataIndex: "role", key: "role", render: (role: string) => (role === 'l2' ? 'l2' : 'l3') },
                     { title: "عملیات", key: "actions", render: (_: any, r: UserRecord) => (
                       <Popconfirm title="حذف دسترسی این کاربر؟" onConfirm={async () => { try { await updateUser(r.id, { backupAllowed: false }); message.success("دسترسی حذف شد"); await loadPermUsers(); } catch (e: any) { message.error(e?.message || "خطا"); } } }>
                         <Button danger icon={<DeleteOutlined />}>حذف دسترسی</Button>

@@ -38,7 +38,7 @@ export default function Users() {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await listUsers('admin');
+        const data = await listUsers('l2');
         setUsers(data);
       } catch (err: any) {
         message.error(err?.message || 'خطا در دریافت کاربران');
@@ -109,7 +109,7 @@ export default function Users() {
         username: values.username,
         nickname: values.nickname || '',
         password: values.password,
-        role: 'admin' as const,
+        role: 'l2' as const,
         forms: values.forms || [],
         forms_view: values.forms_view || [],
         reports: values.reports || [],

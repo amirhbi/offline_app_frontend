@@ -39,7 +39,7 @@ export default function App() {
           <Route index element={<Navigate to="/l2/dashboard" replace />} />
           <Route path="dashboard" element={<L2Dashboard />} />
           <Route path="l3-users" element={<L3Users />} />
-          <Route path="data" element={<L2Data />} />
+          <Route path="data" element={<FormData />} />
           <Route path="reports" element={<L2Reports />} />
           <Route path="export" element={<L2Export />} />
         </Route>

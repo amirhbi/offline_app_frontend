@@ -15,7 +15,7 @@ export default function Login() {
     const res = await signIn(values.username, values.password);
     if (res.ok) {
       const userRole = res.role ?? role;
-      if (userRole === 'admin') {
+      if (userRole === 'l2') {
         navigate('/l2', { replace: true });
       } else if (userRole === 'l3') {
         navigate('/l3', { replace: true });

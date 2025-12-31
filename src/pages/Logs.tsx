@@ -12,10 +12,10 @@ type LogRow = {
 
 export default function Logs() {
   const data: LogRow[] = [
-    { key: 1, user: 'admin', action: 'ورود', detail: 'ورود موفق', time: '1403/08/12 09:20' },
-    { key: 2, user: 'مدیر_اعلام', action: 'ایجاد فایل', detail: 'گزارش فرم ۳', time: '1403/08/12 10:02' },
-    { key: 3, user: 'مدیر_اطفاء', action: 'ویرایش', detail: 'به‌روزرسانی فرم ۴', time: '1403/08/12 11:15' },
-    { key: 4, user: 'admin', action: 'خروجی', detail: 'دانلود رندوم ریزدوم', time: '1403/08/12 12:40' },
+    { key: 1, user: 'l2', action: 'ورود', detail: 'ورود موفق', time: '1403/08/12 09:20' },
+    { key: 2, user: 'l2', action: 'ایجاد فایل', detail: 'گزارش فرم ۳', time: '1403/08/12 10:02' },
+    { key: 3, user: 'l3', action: 'ویرایش', detail: 'به‌روزرسانی فرم ۴', time: '1403/08/12 11:15' },
+    { key: 4, user: 'l2', action: 'خروجی', detail: 'دانلود رندوم ریزدوم', time: '1403/08/12 12:40' },
   ];
 
   return (
