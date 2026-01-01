@@ -14,4 +14,3 @@ export { default as L2Reports } from './L2Reports';
 export { default as L2Export } from './L2Export';
 export { default as L3Dashboard } from './L3Dashboard';
 export { default as L3DataEntry } from './L3DataEntry';
-export { default as L3Export } from './L3Export';
