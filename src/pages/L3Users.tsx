@@ -22,7 +22,25 @@ export default function L3Users() {
     [formsList]
   );
   const truncateText = (s: string, max = 20) => (s && s.length > max ? s.slice(0, max) + '...' : s);
-  const reportOptions = useMemo(() => ['گزارش فرم ۲', 'گزارش فرم ۳', 'گزارش فرم ۴'], []);
+  const reportOptions = useMemo(() => formsList.map((f) => `گزارش ${f.name}`), [formsList]);
+  const [selectedCreateForms, setSelectedCreateForms] = useState<string[]>([]);
+  const [selectedEditForms, setSelectedEditForms] = useState<string[]>([]);
+  const filteredCreateReportOptions = useMemo(() => {
+    const allowed = new Set<string>();
+    (selectedCreateForms || [])
+      .map((id) => formNameById[id] || id)
+      .forEach((name) => allowed.add(`گزارش ${name}`));
+    const list = Array.from(allowed).map((r) => ({ value: r, label: r }));
+    return list.length > 0 ? list : reportOptions.map((r) => ({ value: r, label: r }));
+  }, [selectedCreateForms, formNameById, reportOptions]);
+  const filteredEditReportOptions = useMemo(() => {
+    const allowed = new Set<string>();
+    (selectedEditForms || [])
+      .map((id) => formNameById[id] || id)
+      .forEach((name) => allowed.add(`گزارش ${name}`));
+    const list = Array.from(allowed).map((r) => ({ value: r, label: r }));
+    return list.length > 0 ? list : reportOptions.map((r) => ({ value: r, label: r }));
+  }, [selectedEditForms, formNameById, reportOptions]);
 
   useEffect(() => {
     const load = async () => {
@@ -50,17 +68,35 @@ export default function L3Users() {
     };
     loadForms();
   }, []);
+  useEffect(() => {
+    const current: string[] = createForm.getFieldValue('reports') || [];
+    const allowed = new Set(filteredCreateReportOptions.map((o) => o.value));
+    const next = current.filter((r) => allowed.has(r));
+    if (current.length !== next.length) {
+      createForm.setFieldsValue({ reports: next });
+    }
+  }, [filteredCreateReportOptions, createForm]);
+  useEffect(() => {
+    const current: string[] = editForm.getFieldValue('reports') || [];
+    const allowed = new Set(filteredEditReportOptions.map((o) => o.value));
+    const next = current.filter((r) => allowed.has(r));
+    if (current.length !== next.length) {
+      editForm.setFieldsValue({ reports: next });
+    }
+  }, [filteredEditReportOptions, editForm]);
 
   const handleCreate = async () => {
     try {
       const values = await createForm.validateFields();
       const payload = {
         username: values.username,
+        nickname: values.nickname || '',
+        password: values.password,
         role: 'l3' as const,
         forms: values.forms || [],
         forms_view: values.forms_view || [],
         reports: values.reports || [],
-        logs: [],
+        logs: []
       };
       const created = await createUser(payload);
       setUsers((prev) => [created, ...prev]);
@@ -81,12 +117,20 @@ export default function L3Users() {
       const byName = formsList.find((f) => f.name === v);
       return byName ? byName.id : v;
     });
+    const mappedFormViewIds = (record.forms_view || []).map((v) => {
+      const byId = formsList.find((f) => f.id === v);
+      if (byId) return v;
+      const byName = formsList.find((f) => f.name === v);
+      return byName ? byName.id : v;
+    });
     editForm.setFieldsValue({
       username: record.username,
+      nickname: record.nickname || '',
       forms: mappedFormIds,
-      forms_view: record.forms_view || [],
+      forms_view: mappedFormViewIds,
       reports: record.reports,
     });
+    setSelectedEditForms(mappedFormIds || []);
   };
 
   const handleEdit = async () => {
@@ -95,6 +139,8 @@ export default function L3Users() {
       if (!editingUser) return;
       const updated = await updateUser(editingUser.id, {
         username: values.username,
+        nickname: values.nickname || '',
+        password: values.password || undefined,
         forms: values.forms || [],
         forms_view: values.forms_view || [],
         reports: values.reports || [],
@@ -137,6 +183,7 @@ export default function L3Users() {
         columns={[
           { title: 'نام کاربری l3', dataIndex: 'username' },
           { title: 'سطح', dataIndex: 'role' },
+          { title: 'نام نمایشی', dataIndex: 'nickname' },
           {
             title: 'دسترسی فرم‌ها',
             dataIndex: 'forms',
@@ -201,9 +248,19 @@ export default function L3Users() {
         onCancel={() => setCreateOpen(false)}
         onOk={handleCreate}
       >
-        <Form form={createForm} layout="vertical">
+        <Form
+          form={createForm}
+          layout="vertical"
+          onValuesChange={(_, all) => setSelectedCreateForms((all as any)?.forms || [])}
+        >
           <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}>
             <Input placeholder="operator_branch_X" />
+          </Form.Item>
+          <Form.Item name="nickname" label="نام نمایشی" initialValue="" rules={[{ required: true, message: 'نام نمایشی را وارد کنید' }]}>
+            <Input placeholder="اپراتور_بخش_X" />
+          </Form.Item>
+          <Form.Item name="password" label="رمز عبور" rules={[{ required: true, message: 'رمز عبور را وارد کنید' }]}>
+            <Input.Password placeholder="••••••••" />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
@@ -212,7 +269,12 @@ export default function L3Users() {
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
-            <Select mode="multiple" placeholder="انتخاب گزارش‌ها" options={reportOptions.map((r) => ({ value: r, label: r }))} />
+            <Select
+              mode="multiple"
+              placeholder="انتخاب گزارش‌ها (براساس فرم‌های انتخاب‌شده)"
+              options={filteredCreateReportOptions}
+              disabled={(selectedCreateForms || []).length === 0}
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -226,9 +288,19 @@ export default function L3Users() {
         onCancel={() => { setEditOpen(false); setEditingUser(null); }}
         onOk={handleEdit}
       >
-        <Form form={editForm} layout="vertical">
+        <Form
+          form={editForm}
+          layout="vertical"
+          onValuesChange={(_, all) => setSelectedEditForms((all as any)?.forms || [])}
+        >
           <Form.Item name="username" label="نام کاربری" rules={[{ required: true, message: 'نام کاربری را وارد کنید' }]}>
             <Input />
+          </Form.Item>
+          <Form.Item name="nickname" label="نام نمایشی" initialValue="" rules={[{ required: true, message: 'نام نمایشی را وارد کنید' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="password" label="رمز عبور (در صورت تغییر)">
+            <Input.Password placeholder="رمز عبور جدید" />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
@@ -237,7 +309,12 @@ export default function L3Users() {
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
           <Form.Item name="reports" label="دسترسی گزارش‌ها">
-            <Select mode="multiple" placeholder="انتخاب گزارش‌ها" options={reportOptions.map((r) => ({ value: r, label: r }))} />
+            <Select
+              mode="multiple"
+              placeholder="انتخاب گزارش‌ها (براساس فرم‌های انتخاب‌شده)"
+              options={filteredEditReportOptions}
+              disabled={(selectedEditForms || []).length === 0}
+            />
           </Form.Item>
         </Form>
       </Modal>

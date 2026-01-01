@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Layout, Menu, Button } from 'antd';
-import { DashboardOutlined, FormOutlined, CloudDownloadOutlined, LogoutOutlined } from '@ant-design/icons';
+import { DashboardOutlined, DatabaseOutlined, LogoutOutlined } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
@@ -20,8 +20,7 @@ export default function L3Layout() {
 
   const items = [
     { key: 'dashboard', icon: <DashboardOutlined />, label: 'پنل ویرایشگر' },
-    { key: 'data-entry', icon: <FormOutlined />, label: 'ورود داده (Data Entry)' },
-    { key: 'export', icon: <CloudDownloadOutlined />, label: 'خروجی گیری (در صورت دسترسی)' },
+    { key: 'structure', icon: <DatabaseOutlined />, label: 'مدیریت داده‌ها' }
   ];
 
   return (
