@@ -37,6 +37,8 @@ export default function FormData() {
   const navigate = useNavigate();
   const { formId } = useParams<{ formId: string }>();
   const { userData, role } = useAuth();
+  const isSuperAdmin = (role === 'super_admin');
+  const prePath = (role === 'super_admin' ? '' : role);
   const [formDef, setFormDef] = useState<FormRecord | null>(null);
   const [entries, setEntries] = useState<FormEntryRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,8 +127,6 @@ export default function FormData() {
   }, [formId]);
   
   useEffect(() => {
-        console.log(userData);
-
     if (!formId || !userData) return;
     if ((userData.role as any) === "super_admin") return;
     const allowed = new Set<string>([
@@ -2274,7 +2274,7 @@ export default function FormData() {
           داده‌های فرم
         </Typography.Title>
         <Space>
-          <Button onClick={() => navigate("/structure")}>بازگشت</Button>
+          <Button onClick={() => navigate(`/${prePath}/structure`)}>بازگشت</Button>
           <Button onClick={load}>بازخوانی</Button>
           <Button onClick={exportMode}>دریافت خروجی</Button>
           <Button type="primary" onClick={startInlineAdd} disabled={inlineAdd || !hasWriteAccess}>

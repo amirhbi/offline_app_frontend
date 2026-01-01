@@ -24,10 +24,42 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = 'app_token';
+const USER_KEY = 'app_user_data';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(() => {
+    try {
+      
+      const raw = localStorage.getItem(USER_KEY);
+      if (raw) return JSON.parse(raw) as UserData;
+    } catch {}
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (!t) return null;
+    const p = (() => {
+      try {
+        const seg = t.split('.')[1];
+        if (!seg) return null;
+        const b64 = seg.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b64.length % 4 === 2 ? '==' : b64.length % 4 === 3 ? '=' : '';
+        const json = atob(b64 + pad);
+        return JSON.parse(json);
+      } catch { return null; }
+    })();
+    if (!p) return null;
+    const rawRole = p.role ?? p.user?.role;
+    const role = rawRole === 'super_admin' ? 'super_admin' : (rawRole === 'admin' || rawRole === 'l2') ? 'l2' : (rawRole === 'L3' || rawRole === 'l3') ? 'l3' : rawRole;
+    return {
+      token: t,
+      role,
+      username: p.username ?? p.user?.username ?? null,
+      nickname: p.nickname ?? p.user?.nickname ?? null,
+      forms: p.forms ?? p.user?.forms ?? [],
+      forms_view: p.forms_view ?? p.user?.forms_view ?? [],
+      reports: p.reports ?? p.user?.reports ?? [],
+      logs: p.logs ?? p.user?.logs ?? [],
+    };
+  });
   const [role, setRole] = useState<RoleType | null>(null);
 
   const decodePayload = (t?: string | null): any | null => {
@@ -57,9 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
-    setUserData(userData);
     setRole(extractRole(decodePayload(token)));
-  }, [token, userData]);
+  }, [token]);
+
+  useEffect(() => {
+    if (userData) localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    else localStorage.removeItem(USER_KEY);
+  }, [userData]);
 
   const value = useMemo<AuthContextType>(() => ({
     isAuthenticated: !!token,
