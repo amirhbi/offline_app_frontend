@@ -19,6 +19,8 @@ export default function Login() {
         navigate('/l2', { replace: true });
       } else if (userRole === 'l3') {
         navigate('/l3', { replace: true });
+      } else if (userRole === 'super_admin') {
+        navigate('/', { replace: true });
       } else {
         navigate(from, { replace: true });
       }

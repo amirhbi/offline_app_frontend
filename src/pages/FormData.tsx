@@ -23,6 +23,7 @@ import {
 import logo from "../assets/fire_department.png";
 import reactLogo from "../assets/react.svg";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 import { getForm, FormRecord, FormField } from "../api/forms";
 import {
   listFormEntries,
@@ -35,6 +36,7 @@ import {
 export default function FormData() {
   const navigate = useNavigate();
   const { formId } = useParams<{ formId: string }>();
+  const { userData, role } = useAuth();
   const [formDef, setFormDef] = useState<FormRecord | null>(null);
   const [entries, setEntries] = useState<FormEntryRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -121,6 +123,29 @@ export default function FormData() {
   useEffect(() => {
     load();
   }, [formId]);
+  
+  useEffect(() => {
+        console.log(userData);
+
+    if (!formId || !userData) return;
+    if ((userData.role as any) === "super_admin") return;
+    const allowed = new Set<string>([
+      ...((userData.forms || []).map((id) => id?.toString?.() || String(id))),
+      ...((userData.forms_view || []).map((id) => id?.toString?.() || String(id))),
+    ]);
+    if (!allowed.has(formId)) {
+      message.warning("شما دسترسی مشاهده این فرم را ندارید");
+      navigate("/structure", { replace: true });
+    }
+  }, [formId, userData]);
+
+  const hasWriteAccess = useMemo(() => {
+    if (!userData || !formId) return false;
+    if ((userData.role as any) === "super_admin") return true;
+    return (userData.forms || []).some(
+      (id) => (id as any)?.toString?.() === formId || String(id) === formId
+    );
+  }, [userData, formId]);
 
   const fieldMeta = useMemo(() => {
     const meta: Record<
@@ -891,11 +916,13 @@ export default function FormData() {
         render: (_: any, row: any) => (
           <Space>
             <Button onClick={() => handleView(row, undefined)}>نمایش</Button>
-            <Button onClick={() => handleDuplicate(row, undefined)}>کپی</Button>
-            <Button onClick={() => handleEdit(row, undefined)}>ویرایش</Button>
-            <Button danger onClick={() => handleDelete(row)}>
-              حذف
-            </Button>
+            {hasWriteAccess && <Button onClick={() => handleDuplicate(row, undefined)}>کپی</Button>}
+            {hasWriteAccess && <Button onClick={() => handleEdit(row, undefined)}>ویرایش</Button>}
+            {hasWriteAccess && (
+              <Button danger onClick={() => handleDelete(row)}>
+                حذف
+              </Button>
+            )}
           </Space>
         ),
       });
@@ -961,11 +988,13 @@ export default function FormData() {
           render: (_: any, row: any) => (
             <Space>
               <Button onClick={() => handleView(row, c.name)}>نمایش</Button>
-              <Button onClick={() => handleDuplicate(row, c.name)}>کپی</Button>
-              <Button onClick={() => handleEdit(row, c.name)}>ویرایش</Button>
-              <Button danger onClick={() => handleDelete(row, c.name)}>
-                حذف
-              </Button>
+              {hasWriteAccess && <Button onClick={() => handleDuplicate(row, c.name)}>کپی</Button>}
+              {hasWriteAccess && <Button onClick={() => handleEdit(row, c.name)}>ویرایش</Button>}
+              {hasWriteAccess && (
+                <Button danger onClick={() => handleDelete(row, c.name)}>
+                  حذف
+                </Button>
+              )}
             </Space>
           ),
         });
@@ -2153,6 +2182,10 @@ export default function FormData() {
 
 
   const startInlineAdd = () => {
+    if (!hasWriteAccess) {
+      message.warning("شما دسترسی ثبت/ویرایش برای این فرم را ندارید");
+      return;
+    }
     if (!formDef) return;
     setEditingEntryId(null);
     const initial: Record<string, any> = {};
@@ -2244,7 +2277,7 @@ export default function FormData() {
           <Button onClick={() => navigate("/structure")}>بازگشت</Button>
           <Button onClick={load}>بازخوانی</Button>
           <Button onClick={exportMode}>دریافت خروجی</Button>
-          <Button type="primary" onClick={startInlineAdd} disabled={inlineAdd}>
+          <Button type="primary" onClick={startInlineAdd} disabled={inlineAdd || !hasWriteAccess}>
             افزودن داده جدید
           </Button>
         </Space>

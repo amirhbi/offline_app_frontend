@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { login } from '../api/auth';
 
-type RoleType = 'l2' | 'l3';
+type RoleType = 'l2' | 'l3' | 'super_admin';
 type UserData = {
   token: string;
   role?: RoleType | string;
@@ -47,32 +47,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const extractRole = (p: any | null): RoleType | null => {
     if (!p) return null;
     const raw = p.role ?? p.user?.role;
+    if (raw === 'super_admin') return 'super_admin';
     if (raw === 'admin' || raw === 'l2') return 'l2';
     if (raw === 'L3' || raw === 'l3') return 'l3';
     return null;
   };
 
-  const buildUserData = (t?: string | null): UserData | null => {
-    const p = decodePayload(t);
-    if (!p || !t) return null;
-    return {
-      token: t,
-      role: extractRole(p) ?? p.role ?? p.user?.role,
-      username: p.username ?? p.user?.username ?? null,
-      nickname: p.nickname ?? p.user?.nickname ?? null,
-      forms: p.forms ?? p.user?.forms ?? [],
-      forms_view: p.forms_view ?? p.user?.forms_view ?? [],
-      reports: p.reports ?? p.user?.reports ?? [],
-      logs: p.logs ?? p.user?.logs ?? [],
-    };
-  };
 
   useEffect(() => {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
-    setUserData(buildUserData(token));
+    setUserData(userData);
     setRole(extractRole(decodePayload(token)));
-  }, [token]);
+  }, [token, userData]);
 
   const value = useMemo<AuthContextType>(() => ({
     isAuthenticated: !!token,
@@ -82,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(res.token);
         const payload = decodePayload(res.token);
         const r = extractRole(payload);
-        setUserData(buildUserData(res.token));
+        setUserData(res.userData);
         setRole(r);
         return { ok: true, role: r };
       } catch {
