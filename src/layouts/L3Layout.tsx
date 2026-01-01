@@ -16,7 +16,7 @@ export default function L3Layout() {
   useEffect(() => {
     const path = location.pathname.split('/')[2] || 'dashboard';
     setSelectedKey(path);
-  }, [location]);
+  }, [location]); 
 
   const items = [
     { key: 'dashboard', icon: <DashboardOutlined />, label: 'پنل ویرایشگر' },
