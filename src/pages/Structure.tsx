@@ -54,7 +54,7 @@ export default function Structure() {
   const navigate = useNavigate();
   const { role } = useAuth();
   const isSuperAdmin = (role === 'super_admin');
-  const prePath = (role === 'super_admin' ? '' : role);
+  const prePath = (isSuperAdmin ? '' : '/' + role);
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingForm, setEditingForm] = useState<FormDefinition | null>(null);
@@ -217,7 +217,7 @@ export default function Structure() {
       align: 'left',
       render: (_: any, rec: FormDefinition) => (
         <Space>
-          <Button onClick={() => navigate(`/${prePath}/structure/data/${rec.id}`)}>نمایش داده ها</Button>
+          <Button onClick={() => navigate(`${prePath}/structure/data/${rec.id}`)}>نمایش داده ها</Button>
           {isSuperAdmin && (
             <>
               <Button onClick={() => openEdit(rec)}>ویرایش</Button>
