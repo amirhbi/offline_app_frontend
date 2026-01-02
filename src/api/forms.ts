@@ -42,3 +42,19 @@ export async function getForm(id: string): Promise<FormRecord> {
   const data = await request<ServerForm>(`/forms/${id}`);
   return mapForm(data);
 }
+
+export type UpsertFormPayload = Omit<FormRecord, 'id'>;
+
+export async function createForm(payload: UpsertFormPayload): Promise<FormRecord> {
+  const data = await request<ServerForm>('/forms', { method: 'POST', body: payload });
+  return mapForm(data);
+}
+
+export async function updateForm(id: string, payload: UpsertFormPayload): Promise<FormRecord> {
+  const data = await request<ServerForm>(`/forms/${id}`, { method: 'PUT', body: payload });
+  return mapForm(data);
+}
+
+export async function deleteForm(id: string): Promise<void> {
+  await request<void>(`/forms/${id}`, { method: 'DELETE' });
+}

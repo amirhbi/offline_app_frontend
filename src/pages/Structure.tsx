@@ -16,7 +16,7 @@ import {
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { listForms } from '../api/forms';
+import { listForms, createForm as apiCreateForm, updateForm as apiUpdateForm, deleteForm as apiDeleteForm, UpsertFormPayload } from '../api/forms';
 
 type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'lookup' | 'exist';
 
@@ -151,38 +151,22 @@ export default function Structure() {
         fields: (c.fields || []).map(normalizeField),
       }));
 
+      const payload: UpsertFormPayload = {
+        name: values.name,
+        fields: normalizedFields,
+        subFields: normalizedSubFields,
+        categories: normalizedCategories,
+        pdfDescription: values.pdfDescription || '',
+        pdfImage: values.pdfImage || '',
+        hasSubFields: values.hasSubFields || false,
+      };
+
       if (editingForm) {
-        const res = await fetch(`${API_BASE}/forms/${editingForm.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: values.name,
-            fields: normalizedFields,
-            subFields: normalizedSubFields,
-            categories: normalizedCategories,
-            pdfDescription: values.pdfDescription || '',
-            pdfImage: values.pdfImage || '',
-            hasSubFields: values.hasSubFields || false,
-          }),
-        });
-        if (!res.ok) throw new Error('Failed to update');
+        await apiUpdateForm(editingForm.id, payload);
         await fetchForms();
         message.success('فرم ویرایش شد');
       } else {
-        const res = await fetch(`${API_BASE}/forms`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: values.name,
-            fields: normalizedFields,
-            subFields: normalizedSubFields,
-            categories: normalizedCategories,
-            pdfDescription: values.pdfDescription || '',
-            pdfImage: values.pdfImage || '',
-            hasSubFields: values.hasSubFields || false,
-          }),
-        });
-        if (!res.ok) throw new Error('Failed to create');
+        await apiCreateForm(payload);
         await fetchForms();
         message.success('فرم ایجاد شد');
       }
@@ -194,16 +178,14 @@ export default function Structure() {
     }
   };
 
-  const deleteForm = (id: string) => {
-    fetch(`${API_BASE}/forms/${id}`, { method: 'DELETE' })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to delete');
-      })
-      .then(async () => {
-        await fetchForms();
-        message.success('فرم حذف شد');
-      })
-      .catch(() => message.error('حذف فرم ناموفق بود'));
+  const removeForm = async (id: string) => {
+    try {
+      await apiDeleteForm(id);
+      await fetchForms();
+      message.success('فرم حذف شد');
+    } catch {
+      message.error('حذف فرم ناموفق بود');
+    }
   };
 
   const columns = [
@@ -239,7 +221,7 @@ export default function Structure() {
           {isSuperAdmin && (
             <>
               <Button onClick={() => openEdit(rec)}>ویرایش</Button>
-              <Popconfirm title="حذف فرم؟" onConfirm={() => deleteForm(rec.id)}>
+              <Popconfirm title="حذف فرم؟" onConfirm={() => removeForm(rec.id)}>
                 <Button danger>حذف</Button>
               </Popconfirm>
             </>
