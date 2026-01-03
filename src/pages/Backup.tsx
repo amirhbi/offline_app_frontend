@@ -209,6 +209,39 @@ export default function Backup() {
       message.error(e?.message || "خطا در بازیابی بکاپ");
     }
   };
+  const handleRestoreFromFile = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".gz,.json";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        message.loading("در حال بازیابی از فایل...", 0);
+        const fd = new FormData();
+        fd.append("file", file);
+        const token = localStorage.getItem("app_token");
+        const res = await fetch("/api/backups/restore/file", {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          body: fd,
+        });
+        message.destroy();
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(msg || "خطا در بازیابی از فایل");
+        }
+        const json = await res.json();
+        const forms = json?.counts?.forms ?? 0;
+        const entries = json?.counts?.entries ?? 0;
+        message.success(`بازیابی کامل شد. فرم‌ها: ${forms}، داده‌ها: ${entries}`);
+      } catch (e: any) {
+        message.destroy();
+        message.error(e?.message || "خطا در بازیابی از فایل");
+      }
+    };
+    input.click();
+  };
   const handleDelete = async (rec: BackupRow) => {
     try {
       await request(`/backups/${rec.id}`, { method: "DELETE" });
@@ -288,13 +321,13 @@ export default function Backup() {
             children: (
               <div className="">
                 <Space>
-                  <Button type="primary" icon={<FileZipOutlined />} onClick={handleCreateFullBackup}>
-                    ایجاد بکاپ کامل
-                  </Button>
-                  <Button icon={<CloudUploadOutlined />}>
-                    بازیابی از فایل
-                  </Button>
-                </Space>
+          <Button type="primary" icon={<FileZipOutlined />} onClick={handleCreateFullBackup}>
+            ایجاد بکاپ کامل
+          </Button>
+          <Button icon={<CloudUploadOutlined />} onClick={() => handleRestoreFromFile()}>
+            بازیابی از فایل
+          </Button>
+        </Space>
                 <div className="mt-8">
                   <div className="flex justify-between items-center mb-2">
                     <Typography.Title level={5}>فهرست بکاپ‌ها</Typography.Title>
