@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
+import jalaliday from "jalaliday";
+dayjs.extend(jalaliday);
+(dayjs as any).calendar("jalali");
 import ExcelJS from "exceljs";
 import {
   Card,
@@ -125,7 +128,7 @@ export default function FormData() {
   useEffect(() => {
     load();
   }, [formId]);
-  
+
   useEffect(() => {
     if (!formId || !userData) return;
     console.log(userData);
@@ -255,6 +258,36 @@ export default function FormData() {
     };
   }, [formDef]);
 
+  // Helper: format Unix timestamp or string to Jalali string
+  const formatToJalali = (v: any) => {
+    if (v === null || v === undefined) return "";
+    let d: any;
+    if (dayjs.isDayjs(v)) {
+      d = v;
+    } else if (typeof v === "number") {
+      const ms = v < 10000000000 ? v * 1000 : v;
+      d = dayjs(ms);
+    } else if (typeof v === "string") {
+      const s = v.trim();
+      if (s === "") return "";
+      const isNumericLike =
+        !s.includes("-") && !s.includes("/") && !isNaN(Number(s));
+      if (isNumericLike) {
+        const n = Number(s);
+        const ms = n < 10000000000 ? n * 1000 : n;
+        d = dayjs(ms);
+      } else {
+        d = dayjs(s);
+      }
+    } else {
+      return String(v);
+    }
+    if (!d || typeof d.format !== "function" || !(d as any).isValid?.()) {
+      return String(v);
+    }
+    return d.format("YYYY-MM-DD");
+  };
+
   // Helper: determine if a value should be considered meaningful/present for display/save
   const hasMeaningfulValue = (type: FormField["type"], v: any): boolean => {
     if (v === null || v === undefined) return false;
@@ -308,10 +341,14 @@ export default function FormData() {
         );
       case "date":
         // Ensure value is parsed/formatted as Jalali when present
-        const dv: any =
-          typeof value === "string"
-            ? (dayjs as any)(value, { jalali: true })
+        let dv: any = value;
+        if (value && !dayjs.isDayjs(value)) {
+          const possibleNum = Number(value);
+          const val = (!isNaN(possibleNum) && String(value).trim() !== "" && !String(value).includes("-") && !String(value).includes("/"))
+            ? (possibleNum < 10000000000 ? possibleNum * 1000 : possibleNum)
             : value;
+          dv = dayjs(val);
+        }
         return (
           <>
             <JalaliLocaleListener />
@@ -476,8 +513,10 @@ export default function FormData() {
         for (const f of (cat.fields ?? []) as FormField[]) {
           const key = `${cat.name} - ${f.label}`;
           const v = row?.data?.[key];
-          if (f.type === "date" && v)
-            initial[key] = (dayjs as any)(v, { jalali: true });
+          if (f.type === "date" && v) {
+            const val = typeof v === "number" && v < 10000000000 ? v * 1000 : v;
+            initial[key] = dayjs(val);
+          }
           else if (f.type === "checkbox") initial[key] = !!v;
           else if (f.type === "select") initial[key] = v ?? undefined;
           else initial[key] = v ?? "";
@@ -494,8 +533,10 @@ export default function FormData() {
       const initial: Record<string, any> = {};
       for (const f of (formDef.fields ?? []) as FormField[]) {
         const v = row?.data?.[f.label];
-        if (f.type === "date" && v)
-          initial[f.label] = (dayjs as any)(v, { jalali: true });
+        if (f.type === "date" && v) {
+          const val = typeof v === "number" && v < 10000000000 ? v * 1000 : v;
+          initial[f.label] = dayjs(val);
+        }
         else if (f.type === "checkbox") initial[f.label] = !!v;
         else initial[f.label] = v ?? "";
       }
@@ -517,8 +558,10 @@ export default function FormData() {
     const initial: Record<string, any> = {};
     for (const f of (formDef.fields ?? []) as FormField[]) {
       const v = row?.data?.[f.label];
-      if (f.type === "date" && v)
-        initial[f.label] = (dayjs as any)(v, { jalali: true });
+      if (f.type === "date" && v) {
+        const val = typeof v === "number" && v < 10000000000 ? v * 1000 : v;
+        initial[f.label] = dayjs(val);
+      }
       else if (f.type === "checkbox") initial[f.label] = !!v;
       else if (f.type === "select") initial[f.label] = v ?? undefined;
       else initial[f.label] = v ?? "";
@@ -527,8 +570,10 @@ export default function FormData() {
       for (const f of (c.fields ?? []) as FormField[]) {
         const key = `${c.name} - ${f.label}`;
         const v = row?.data?.[key];
-        if (f.type === "date" && v)
-          initial[key] = (dayjs as any)(v, { jalali: true });
+        if (f.type === "date" && v) {
+          const val = typeof v === "number" && v < 10000000000 ? v * 1000 : v;
+          initial[key] = dayjs(val);
+        }
         else if (f.type === "checkbox") initial[key] = !!v;
         else if (f.type === "select") initial[key] = v ?? undefined;
         else initial[key] = v ?? "";
@@ -564,6 +609,8 @@ export default function FormData() {
         if (meta && meta.type === "checkbox") {
           const checked = v === true || v === "true" || v === 1 || v === "1";
           display = checked ? "✓" : "✗";
+        } else if (meta && meta.type === "date") {
+          display = formatToJalali(v);
         }
         items.push({ label: f.label, value: display });
       }
@@ -581,6 +628,8 @@ export default function FormData() {
           if (meta && meta.type === "checkbox") {
             const checked = v === true || v === "true" || v === 1 || v === "1";
             display = checked ? "✓" : "✗";
+          } else if (meta && meta.type === "date") {
+            display = formatToJalali(v);
           }
           items.push({ label: f.label, value: display });
         }
@@ -691,7 +740,13 @@ export default function FormData() {
       for (const f of formDef.fields || []) {
         const v = inlineValues[f.label];
         if (!hasMeaningfulValue(f.type, v)) continue;
-        if (f.type === "date") data[f.label] = v.format("YYYY-MM-DD");
+        if (f.type === "date") {
+          const possibleNum = Number(v);
+          const val = (dayjs.isDayjs(v) || isNaN(possibleNum) || String(v).trim() === "" || String(v).includes("-") || String(v).includes("/"))
+            ? v
+            : (possibleNum < 10000000000 ? possibleNum * 1000 : possibleNum);
+          data[f.label] = (dayjs(val) as any).unix();
+        }
         else if (f.type === "number") {
           const n = typeof v === "number" ? v : Number(v);
           if (!isNaN(n)) data[f.label] = n;
@@ -706,7 +761,13 @@ export default function FormData() {
           const key = `${c.name} - ${f.label}`;
           const v = inlineValues[key];
           if (!hasMeaningfulValue(f.type, v)) continue;
-          if (f.type === "date") data[key] = v.format("YYYY-MM-DD");
+          if (f.type === "date") {
+            const possibleNum = Number(v);
+            const val = (dayjs.isDayjs(v) || isNaN(possibleNum) || String(v).trim() === "" || String(v).includes("-") || String(v).includes("/"))
+              ? v
+              : (possibleNum < 10000000000 ? possibleNum * 1000 : possibleNum);
+            data[key] = (dayjs(val) as any).unix();
+          }
           else if (f.type === "number") {
             const n = typeof v === "number" ? v : Number(v);
             if (!isNaN(n)) data[key] = n;
@@ -734,7 +795,15 @@ export default function FormData() {
       }
       // Include subFieldsData if there's any data (simpler condition)
       if (subFieldsData.length > 0) {
-        data["subFieldsData"] = subFieldsData;
+        data["subFieldsData"] = subFieldsData.map((row) => {
+          const newRow = { ...row };
+          (formDef.subFields || []).forEach((sf) => {
+            if (sf.type === "date" && dayjs.isDayjs(newRow[sf.label])) {
+              newRow[sf.label] = newRow[sf.label].unix();
+            }
+          });
+          return newRow;
+        });
       }
       if (editingEntryId) {
         await updateFormEntry(formId, editingEntryId, { data });
@@ -809,7 +878,9 @@ export default function FormData() {
                   )}
                 </Space>
               )
-              : val,
+              : fieldMeta[f.label]?.type === "date"
+                ? formatToJalali(val)
+                : val,
       });
     }
     // Extra color field (appended after base fields)
@@ -846,7 +917,9 @@ export default function FormData() {
                       )}
                     </Space>
                   )
-                  : val,
+                  : fieldMeta[key]?.type === "date"
+                    ? formatToJalali(val)
+                    : val,
         });
       }
     }
@@ -901,6 +974,9 @@ export default function FormData() {
                 )}
               </Space>
             );
+          }
+          if (meta?.type === "date") {
+            return formatToJalali(val);
           }
           return val;
         },
@@ -973,6 +1049,9 @@ export default function FormData() {
                   )}
                 </Space>
               );
+            }
+            if (meta?.type === "date") {
+              return formatToJalali(val);
             }
             return val;
           },
@@ -1297,6 +1376,9 @@ export default function FormData() {
             const checked = v === true || v === "true" || v === 1 || v === "1";
             return checked ? "✓" : "";
           }
+          if (meta && meta.type === "date") {
+            return formatToJalali(v);
+          }
           return v ?? "";
         });
         const rowValues = [(rIndex - 1).toString(), ...values];
@@ -1346,6 +1428,9 @@ export default function FormData() {
               if (sf.type === "checkbox") {
                 const checked = v === true || v === "true" || v === 1 || v === "1";
                 return checked ? "✓" : "";
+              }
+              if (sf.type === "date") {
+                return formatToJalali(v);
               }
               return v ?? "";
             });
@@ -1403,6 +1488,9 @@ export default function FormData() {
           if (meta && meta.type === "checkbox") {
             const checked = v === true || v === "true" || v === 1 || v === "1";
             return checked ? "✓" : "";
+          }
+          if (meta && meta.type === "date") {
+            return formatToJalali(v);
           }
           return v ?? "";
         });
@@ -1610,6 +1698,8 @@ export default function FormData() {
           if (meta && meta.type === "checkbox") {
             const checked = v === true || v === "true" || v === 1 || v === "1";
             display = checked ? "✓" : "";
+          } else if (meta && meta.type === "date") {
+            display = formatToJalali(v);
           }
           td.textContent = display === null || display === undefined ? "" : String(display);
           td.style.border = "1px solid #ddd";
@@ -1686,6 +1776,8 @@ export default function FormData() {
               let disp = val;
               if (sf.type === "checkbox") {
                 disp = val === true || val === "true" || val === 1 || val === "1" ? "✓" : "";
+              } else if (sf.type === "date") {
+                disp = formatToJalali(val);
               }
               rowTd.textContent = disp === null || disp === undefined ? "" : String(disp);
               rowTd.style.border = "1px solid #eee";
@@ -2002,6 +2094,8 @@ export default function FormData() {
           if (meta && meta.type === "checkbox") {
             const checked = v === true || v === "true" || v === 1 || v === "1";
             display = checked ? "✓" : "";
+          } else if (meta && meta.type === "date") {
+            display = formatToJalali(v);
           }
           td.textContent = display === null || display === undefined ? "" : String(display);
           td.style.border = "1px solid #ddd";
@@ -2077,6 +2171,8 @@ export default function FormData() {
               let disp = val;
               if (sf.type === "checkbox") {
                 disp = val === true || val === "true" || val === 1 || val === "1" ? "✓" : "";
+              } else if (sf.type === "date") {
+                disp = formatToJalali(val);
               }
               rowTd.textContent = disp === null || disp === undefined ? "" : String(disp);
               rowTd.style.border = "1px solid #eee";
@@ -2258,7 +2354,9 @@ export default function FormData() {
                         ? "✓"
                         : "✗"
                       : "—"
-                    : val,
+                    : sf.type === "date"
+                      ? formatToJalali(val)
+                      : val,
               })) as any}
               pagination={false}
               size="small"
@@ -2544,6 +2642,37 @@ export default function FormData() {
                         </div>
                       );
                     }
+                    if (sf.type === "date") {
+                      const val = row[sf.label];
+                      let dv: any = null;
+                      if (val) {
+                        if (dayjs.isDayjs(val)) {
+                          dv = val;
+                        } else {
+                          const possibleNum = Number(val);
+                          const finalVal = (!isNaN(possibleNum) && String(val).trim() !== "" && !String(val).includes("-") && !String(val).includes("/"))
+                            ? (possibleNum < 10000000000 ? possibleNum * 1000 : possibleNum)
+                            : val;
+                          dv = dayjs(finalVal);
+                        }
+                      }
+                      return (
+                        <div key={sf.label} className="flex flex-col">
+                          <span className="text-xs text-gray-500 mb-1">{sf.label}</span>
+                          <DatePickerJalali
+                            style={{ width: 140 }}
+                            value={(dv && dv.isValid()) ? dv : null}
+                            onChange={(d) => {
+                              setSubFieldsData((prev) =>
+                                prev.map((r, i) =>
+                                  i === idx ? { ...r, [sf.label]: d } : r
+                                )
+                              );
+                            }}
+                          />
+                        </div>
+                      );
+                    }
                     return null;
                   })}
                   <Button
@@ -2667,7 +2796,9 @@ export default function FormData() {
                                 ? "✓"
                                 : "✗"
                               : "—"
-                            : val,
+                            : sf.type === "date"
+                              ? formatToJalali(val)
+                              : val,
                       })),
                     ];
                     return (
