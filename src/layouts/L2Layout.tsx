@@ -22,9 +22,14 @@ export default function L2Layout() {
     { key: 'dashboard', icon: <DashboardOutlined />, label: 'داشبورد بخشی' },
     { key: 'l3-users', icon: <TeamOutlined />, label: 'مدیریت کاربران (l3)' },
     { key: 'structure', icon: <DatabaseOutlined />, label: 'مدیریت داده‌ها' },
-    { key: 'reports', icon: <FileTextOutlined />, label: 'گزارش‌گیری بخشی' },
-    { key: 'export', icon: <CloudDownloadOutlined />, label: 'خروجی گیری' },
   ];
+
+  // Add backup item to items
+  if(userData.backupAllowed){
+    items.push({ key: 'backup', icon: <DatabaseOutlined />, label: 'پشتیبان‌گیری' });
+  }
+
+
 
   return (
     <Layout style={{ minHeight: '100vh' }}>

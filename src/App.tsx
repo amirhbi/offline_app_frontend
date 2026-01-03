@@ -55,8 +55,7 @@ export default function App() {
           <Route path="l3-users" element={<L3Users />} />
           <Route path="structure" element={<Structure />} />
           <Route path="structure/data/:formId" element={<FormData />} />
-          <Route path="reports" element={<L2Reports />} />
-          <Route path="export" element={<L2Export />} />
+          <Route path="backup" element={<Backup />} />
         </Route>
         <Route
           path="/l3"
@@ -72,6 +71,7 @@ export default function App() {
           <Route path="dashboard" element={<L3Dashboard />} />
           <Route path="structure" element={<Structure />} />
           <Route path="structure/data/:formId" element={<FormData />} />
+          <Route path="backup" element={<Backup />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

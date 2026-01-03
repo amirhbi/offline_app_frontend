@@ -11,6 +11,7 @@ type UserData = {
   forms_view?: string[];
   reports?: string[];
   logs?: string[];
+  backupAllowed?: boolean;
 };
 
 type AuthContextType = {
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       forms_view: p.forms_view ?? p.user?.forms_view ?? [],
       reports: p.reports ?? p.user?.reports ?? [],
       logs: p.logs ?? p.user?.logs ?? [],
+      backupAllowed: p.backupAllowed ?? p.backupAllowed ?? false
     };
   });
   const [role, setRole] = useState<RoleType | null>(null);

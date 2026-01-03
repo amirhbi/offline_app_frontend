@@ -22,6 +22,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import { listUsers, updateUser, UserRecord } from "../api/users";
+import { useAuth } from "../auth/AuthContext";
 
 export default function Backup() {
   const [form] = Form.useForm();
@@ -146,6 +147,8 @@ export default function Backup() {
     message.success(`بکاپ ${rec.fileName} حذف شد`);
     setBackups((prev) => prev.filter((b) => b.id !== rec.id));
   };
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
 
   const columns = [
     { title: "نام فایل", dataIndex: "fileName", key: "fileName" },
@@ -348,15 +351,17 @@ export default function Backup() {
               </Form>
             ),
           },
-          {
-            key: "permissions",
-            label: "مدیریت دسترسی",
-            children: (
-              <>
-              <Form
-                form={permForm}
-                layout="vertical"
-                onFinish={onSavePerm}
+          ...(isSuperAdmin
+            ? [
+                {
+                  key: "permissions",
+                  label: "مدیریت دسترسی",
+                  children: (
+                  <>
+                  <Form
+                    form={permForm}
+                    layout="vertical"
+                    onFinish={onSavePerm}
                 className="mb-4"
               >
                 <Form.Item
@@ -405,10 +410,12 @@ export default function Backup() {
                     ) },
                   ] as any}
                 />
-              </div>
-              </>
-            ),
-          },
+                  </div>
+                  </>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
     </Card>

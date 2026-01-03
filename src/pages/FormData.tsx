@@ -131,7 +131,6 @@ export default function FormData() {
 
   useEffect(() => {
     if (!formId || !userData) return;
-    console.log(userData);
     if ((userData.role as any) === "super_admin") return;
     const allowed = new Set<string>([
       ...((userData.forms || []).map((id) => id?.toString?.() || String(id))),
