@@ -189,8 +189,25 @@ export default function Backup() {
       message.error(e?.message || "خطا در دانلود فایل");
     }
   };
-  const handleRestore = (rec: BackupRow) => {
-    message.success(`بازیابی از ${rec.fileName} آغاز شد`);
+  const handleRestore = async (rec: BackupRow) => {
+    try {
+      message.loading("در حال بازیابی...", 0);
+      const res = await request<{ ok: boolean; counts?: { forms: number; entries: number } }>(
+        `/backups/${rec.id}/restore`,
+        { method: "POST" }
+      );
+      message.destroy();
+      if (res?.ok) {
+        const forms = res.counts?.forms ?? 0;
+        const entries = res.counts?.entries ?? 0;
+        message.success(`بازیابی کامل شد. فرم‌ها: ${forms}، داده‌ها: ${entries}`);
+      } else {
+        message.success(`بازیابی از ${rec.fileName} انجام شد`);
+      }
+    } catch (e: any) {
+      message.destroy();
+      message.error(e?.message || "خطا در بازیابی بکاپ");
+    }
   };
   const handleDelete = async (rec: BackupRow) => {
     try {
