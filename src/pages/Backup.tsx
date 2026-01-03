@@ -15,6 +15,7 @@ import {
   Table,
   Popconfirm,
 } from "antd";
+import dayjs from "dayjs";
 import {
   CloudUploadOutlined,
   CloudDownloadOutlined,
@@ -37,8 +38,24 @@ export default function Backup() {
   const [permUsers, setPermUsers] = useState<UserRecord[]>([]);
   const [permUsersLoading, setPermUsersLoading] = useState(false);
 
-  const onSave = (values: any) => {
-    message.success("تنظیمات زمان‌بندی ذخیره شد");
+  const onSave = async (values: any) => {
+    try {
+      const payload = {
+        auto_backup_enabled: !!values.auto_backup_enabled,
+        frequency: values.frequency,
+        weekday: values.weekday,
+        monthday:
+          typeof values.monthday === "number" ? values.monthday : undefined,
+        time:
+          values.time && typeof (values.time as any).format === "function"
+            ? (values.time as any).format("HH:mm")
+            : values.time,
+      };
+      await request("/backups/schedule", { method: "POST", body: payload });
+      message.success("تنظیمات زمان‌بندی ذخیره شد");
+    } catch (e: any) {
+      message.error(e?.message || "خطا در ذخیره زمان‌بندی");
+    }
   };
   const onSavePerm = async (values: any) => {
     try {
@@ -101,6 +118,20 @@ export default function Backup() {
     loadBackups();
     loadUsers();
     loadPermUsers();
+    (async () => {
+      try {
+        const s = await request<any>("/backups/schedule");
+        if (s) {
+          form.setFieldsValue({
+            auto_backup_enabled: !!s.enabled,
+            frequency: s.frequency || "daily",
+            weekday: s.weekday,
+            monthday: s.monthday,
+            time: s.time ? dayjs(`1970-01-01 ${s.time}`) : undefined,
+          });
+        }
+      } catch {}
+    })();
   }, []);
 
   const loadUsers = async () => {
@@ -270,12 +301,12 @@ export default function Backup() {
               <Form
                 form={form}
                 layout="vertical"
-                initialValues={{ enabled: false, frequency: "daily" }}
+                initialValues={{ auto_backup_enabled: false, frequency: "daily" }}
                 onFinish={onSave}
                 className="mb-4"
               >
                 <Form.Item
-                  name="enabled"
+                  name="auto_backup_enabled"
                   label="فعال‌سازی زمان‌بندی خودکار"
                   valuePropName="checked"
                 >
