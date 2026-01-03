@@ -22,7 +22,6 @@ export default function AdminLayout() {
     { key: 'dashboard', icon: <DashboardOutlined />, label: 'داشبورد سراسری' },
     { key: 'users', icon: <UserOutlined />, label: 'مدیریت کاربران' },
     { key: 'structure', icon: <SettingOutlined />, label: 'مدیریت داده ها' },
-    { key: 'reports', icon: <FileTextOutlined />, label: 'گزارش‌گیری کلی' },
     { key: 'backup', icon: <DatabaseOutlined />, label: 'پشتیبان‌گیری' },
     { key: 'logs', icon: <AuditOutlined />, label: 'بخش لاگ‌ها' },
   ];

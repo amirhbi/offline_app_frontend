@@ -23,6 +23,7 @@ import {
 } from "@ant-design/icons";
 import { listUsers, updateUser, UserRecord } from "../api/users";
 import { useAuth } from "../auth/AuthContext";
+import { request } from "../api/client";
 
 export default function Backup() {
   const [form] = Form.useForm();
@@ -76,22 +77,17 @@ export default function Backup() {
   const loadBackups = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/backups");
-      if (res.ok) {
-        const data = await res.json();
-        const mapped: BackupRow[] = (data || []).map((b: any) => ({
-          id: b._id ?? b.id ?? String(Math.random()),
-          fileName: b.fileName ?? b.name ?? "backup.zip",
-          sizeMB:
-            typeof b.sizeMB === "number"
-              ? b.sizeMB
-              : Math.round(((b.sizeBytes ?? 0) / (1024 * 1024)) * 10) / 10,
-          createdAt: b.createdAt ?? new Date().toISOString(),
-        }));
-        setBackups(mapped);
-      } else {
-        setBackups(sampleBackups);
-      }
+      const data = await request<any[]>("/backups");
+      const mapped: BackupRow[] = (data || []).map((b: any) => ({
+        id: b._id ?? b.id ?? String(Math.random()),
+        fileName: b.fileName ?? b.name ?? "backup.zip",
+        sizeMB:
+          typeof b.sizeMB === "number"
+            ? b.sizeMB
+            : Math.round(((b.sizeBytes ?? 0) / (1024 * 1024)) * 10) / 10,
+        createdAt: b.createdAt ?? new Date().toISOString(),
+      }));
+      setBackups(mapped);
     } catch (e) {
       setBackups(sampleBackups);
     } finally {
@@ -136,19 +132,56 @@ export default function Backup() {
     }
   };
 
-  const handleDownload = (rec: BackupRow) => {
-    message.success(`دانلود ${rec.fileName} آغاز شد`);
+  const handleDownload = async (rec: BackupRow) => {
+    try {
+      const token = localStorage.getItem('app_token');
+      const res = await fetch(`/api/backups/${rec.id}/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || 'خطا در دانلود فایل');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = rec.fileName || "backup.json.gz";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      message.success(`دانلود ${rec.fileName} آغاز شد`);
+    } catch (e: any) {
+      message.error(e?.message || "خطا در دانلود فایل");
+    }
   };
   const handleRestore = (rec: BackupRow) => {
     message.success(`بازیابی از ${rec.fileName} آغاز شد`);
   };
   const handleDelete = async (rec: BackupRow) => {
-    // If API exists, call DELETE /api/backups/:id
-    message.success(`بکاپ ${rec.fileName} حذف شد`);
-    setBackups((prev) => prev.filter((b) => b.id !== rec.id));
+    try {
+      await request(`/backups/${rec.id}`, { method: "DELETE" });
+      message.success(`بکاپ ${rec.fileName} حذف شد`);
+      await loadBackups();
+    } catch (e: any) {
+      message.error(e?.message || "خطا در حذف بکاپ");
+    }
   };
   const { role } = useAuth();
   const isSuperAdmin = role === "super_admin";
+  const handleCreateFullBackup = async () => {
+    try {
+      message.loading("در حال ایجاد بکاپ...", 0);
+      await request("/backups", { method: "POST" });
+      message.destroy();
+      message.success("بکاپ با موفقیت ایجاد شد");
+      await loadBackups();
+    } catch (e: any) {
+      message.destroy();
+      message.error(e?.message || "خطا در ایجاد بکاپ");
+    }
+  };
 
   const columns = [
     { title: "نام فایل", dataIndex: "fileName", key: "fileName" },
@@ -201,7 +234,7 @@ export default function Backup() {
             children: (
               <div className="">
                 <Space>
-                  <Button type="primary" icon={<FileZipOutlined />}>
+                  <Button type="primary" icon={<FileZipOutlined />} onClick={handleCreateFullBackup}>
                     ایجاد بکاپ کامل
                   </Button>
                   <Button icon={<CloudUploadOutlined />}>
