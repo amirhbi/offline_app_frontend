@@ -55,24 +55,24 @@ export default function Backup() {
   type BackupRow = {
     id: string;
     fileName: string;
-    sizeMB: number;
+    sizeBytes: number;
     createdAt: string; // ISO
   };
 
-  const sampleBackups: BackupRow[] = [
-    {
-      id: "b1",
-      fileName: "backup_full_1402-09-19.zip",
-      sizeMB: 128,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "b2",
-      fileName: "backup_inc_1402-09-18.zip",
-      sizeMB: 42,
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-  ];
+  const formatBytes = (bytes: number) => {
+    if (!bytes || bytes < 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let i = 0;
+    let num = bytes;
+    while (num >= 1024 && i < units.length - 1) {
+      num /= 1024;
+      i++;
+    }
+    const fixed = num >= 10 || i === 0 ? 0 : 1;
+    return `${num.toFixed(fixed)} ${units[i]}`;
+  };
+
+ 
 
   const loadBackups = async () => {
     setLoading(true);
@@ -81,15 +81,17 @@ export default function Backup() {
       const mapped: BackupRow[] = (data || []).map((b: any) => ({
         id: b._id ?? b.id ?? String(Math.random()),
         fileName: b.fileName ?? b.name ?? "backup.zip",
-        sizeMB:
-          typeof b.sizeMB === "number"
-            ? b.sizeMB
-            : Math.round(((b.sizeBytes ?? 0) / (1024 * 1024)) * 10) / 10,
+        sizeBytes:
+          typeof b.sizeBytes === "number"
+            ? b.sizeBytes
+            : typeof b.sizeFile === "number"
+            ? Math.max(0, Math.round(b.sizeFile * 1024 * 1024))
+            : 0,
         createdAt: b.createdAt ?? new Date().toISOString(),
       }));
       setBackups(mapped);
     } catch (e) {
-      setBackups(sampleBackups);
+      console.log(e);
     } finally {
       setLoading(false);
     }
@@ -185,7 +187,11 @@ export default function Backup() {
 
   const columns = [
     { title: "نام فایل", dataIndex: "fileName", key: "fileName" },
-    { title: "حجم (MB)", dataIndex: "sizeMB", key: "sizeMB" },
+    {
+      title: "حجم فایل",
+      key: "size",
+      render: (_: any, rec: BackupRow) => formatBytes(rec.sizeBytes),
+    },
     {
       title: "زمان ایجاد",
       dataIndex: "createdAt",
