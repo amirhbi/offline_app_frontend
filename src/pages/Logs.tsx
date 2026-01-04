@@ -121,7 +121,6 @@ export default function Logs() {
 
       <Space>
         <Button icon={<DownloadOutlined />} type="primary">دانلود لاگ کامل</Button>
-        <Button icon={<FileSearchOutlined />} onClick={load}>نمایش کامل لاگ</Button>
         <Button icon={<DeleteOutlined />} danger>پاکسازی لاگ‌ها</Button>
       </Space>
     </Card>

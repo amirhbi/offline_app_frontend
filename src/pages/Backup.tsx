@@ -192,15 +192,16 @@ export default function Backup() {
   const handleRestore = async (rec: BackupRow) => {
     try {
       message.loading("در حال بازیابی...", 0);
-      const res = await request<{ ok: boolean; counts?: { forms: number; entries: number } }>(
+      const res = await request<{ ok: boolean; counts?: { users: number; forms: number; entries: number } }>(
         `/backups/${rec.id}/restore`,
         { method: "POST" }
       );
       message.destroy();
       if (res?.ok) {
+        const users = res.counts?.users ?? 0;
         const forms = res.counts?.forms ?? 0;
         const entries = res.counts?.entries ?? 0;
-        message.success(`بازیابی کامل شد. فرم‌ها: ${forms}، داده‌ها: ${entries}`);
+        message.success(`بازیابی کامل شد. کاربران: ${users}، فرم‌ها: ${forms}، داده‌ها: ${entries}`);
       } else {
         message.success(`بازیابی از ${rec.fileName} انجام شد`);
       }
@@ -232,9 +233,10 @@ export default function Backup() {
           throw new Error(msg || "خطا در بازیابی از فایل");
         }
         const json = await res.json();
+        const users = json?.counts?.users ?? 0;
         const forms = json?.counts?.forms ?? 0;
         const entries = json?.counts?.entries ?? 0;
-        message.success(`بازیابی کامل شد. فرم‌ها: ${forms}، داده‌ها: ${entries}`);
+        message.success(`بازیابی کامل شد. کاربران: ${users}، فرم‌ها: ${forms}، داده‌ها: ${entries}`);
       } catch (e: any) {
         message.destroy();
         message.error(e?.message || "خطا در بازیابی از فایل");
