@@ -14,7 +14,7 @@ type LogRow = {
 export default function Logs() {
   const [data, setData] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'user' | 'forms' | 'entry' | 'export'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'user' | 'forms' | 'entry' | 'export' | 'backup'>('all');
   const load = async () => {
     setLoading(true);
     try {
@@ -52,26 +52,32 @@ export default function Logs() {
       a === 'export_xlsx' ? { label: 'دریافت خروجی XLSX', color: 'blue' } :
       a === 'export_pdf' ? { label: 'دریافت خروجی PDF', color: 'blue' } :
       a === 'export_html' ? { label: 'دریافت خروجی HTML', color: 'blue' } :
+      a === 'backup_create' ? { label: 'ایجاد بکاپ', color: 'purple' } :
+      a === 'backup_restore' ? { label: 'بازیابی از بکاپ', color: 'orange' } :
+      a === 'backup_restore_file' ? { label: 'بازیابی از فایل', color: 'orange' } :
+      a === 'backup_delete' ? { label: 'حذف بکاپ', color: 'red' } :
       { label: action, color: 'default' };
     return <Tag color={meta.color}>{meta.label}</Tag>;
   };
 
-  const categoryOf = (action: string): 'user' | 'forms' | 'entry' | 'export' | 'other' => {
+  const categoryOf = (action: string): 'user' | 'forms' | 'entry' | 'export' | 'backup' | 'other' => {
     const a = String(action || '').toLowerCase();
     if (a === 'login' || a === 'logout' || a.startsWith('user_')) return 'user';
     if (a.startsWith('form_')) return 'forms';
     if (a.startsWith('entry_')) return 'entry';
     if (a.startsWith('export_')) return 'export';
+    if (a.startsWith('backup_')) return 'backup';
     return 'other';
   };
   const counts = useMemo(() => {
-    const c = { all: data.length, user: 0, forms: 0, entry: 0, export: 0 };
+    const c = { all: data.length, user: 0, forms: 0, entry: 0, export: 0, backup: 0 };
     for (const r of data) {
       const cat = categoryOf(r.action);
       if (cat === 'user') c.user++;
       else if (cat === 'forms') c.forms++;
       else if (cat === 'entry') c.entry++;
       else if (cat === 'export') c.export++;
+      else if (cat === 'backup') c.backup++;
     }
     return c;
   }, [data]);
@@ -95,6 +101,7 @@ export default function Logs() {
           { key: 'forms', label: `فرم‌ها (${counts.forms})` },
           { key: 'entry', label: `رکوردها (${counts.entry})` },
           { key: 'export', label: `خروجی‌ها (${counts.export})` },
+          { key: 'backup', label: `بکاپ‌ها (${counts.backup})` },
         ]}
       />
 
