@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { login } from '../api/auth';
+import { request } from '../api/client';
 
 type RoleType = 'l2' | 'l3' | 'super_admin';
 type UserData = {
@@ -114,7 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: false, role: null };
       }
     },
-    signOut: () => { setToken(null); setUserData(null); setRole(null); },
+    signOut: async () => { 
+      try { await request('/auth/logout', { method: 'POST' }); } catch {}
+      setToken(null); setUserData(null); setRole(null); 
+    },
     userData,
     role,
   }), [token, userData, role]);
