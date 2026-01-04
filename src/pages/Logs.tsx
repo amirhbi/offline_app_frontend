@@ -39,6 +39,9 @@ export default function Logs() {
     const meta: { label: string; color: string } =
       a === 'login' ? { label: 'ورود', color: 'green' } :
       a === 'logout' ? { label: 'خروج', color: 'cyan' } :
+      a === 'user_create' ? { label: 'ایجاد کاربر', color: 'green' } :
+      a === 'user_update' ? { label: 'ویرایش کاربر', color: 'gold' } :
+      a === 'user_delete' ? { label: 'حذف کاربر', color: 'red' } :
       { label: action, color: 'default' };
     return <Tag color={meta.color}>{meta.label}</Tag>;
   };
