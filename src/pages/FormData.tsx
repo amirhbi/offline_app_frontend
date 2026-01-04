@@ -35,6 +35,7 @@ import {
   updateFormEntry,
   deleteFormEntry,
 } from "../api/formEntries";
+import { request } from "../api/client";
 
 export default function FormData() {
   const navigate = useNavigate();
@@ -1522,6 +1523,15 @@ export default function FormData() {
     a.download = `${formDef.name}-entries.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
+    try {
+      await request('/logs', {
+        method: 'POST',
+        body: {
+          action: 'export_xlsx',
+          detail: `خروجی XLSX | فرم ${formDef.name} | رکوردها: ${targetEntries.length} | خروجی تصادفی: ${randomOrder ? 'بله' : 'خیر'} | خروجی با رنگ‌ها: ${includeColors ? 'بله' : 'خیر'}`,
+        },
+      });
+    } catch {}
   };
 
   const downloadPdf = async () => {
@@ -1943,6 +1953,15 @@ export default function FormData() {
         jsPDF: { unit: "mm", format: "a4", orientation: pdfLandscape ? "landscape" : "portrait" },
       } as any;
       await html2pdfCandidate().from(container).set(opt).save();
+      try {
+        await request('/logs', {
+          method: 'POST',
+          body: {
+            action: 'export_pdf',
+            detail: `خروجی PDF | فرم ${formDef.name} | رکوردها: ${targetEntries.length} | خروجی تصادفی: ${randomOrder ? 'بله' : 'خیر'} | خروجی با رنگ‌ها: ${includeColors ? 'بله' : 'خیر'}`,
+          },
+        });
+      } catch {}
     } catch (err) {
       console.error(err);
       message.error("خطا در تولید PDF");
@@ -2274,6 +2293,15 @@ export default function FormData() {
     a.download = `${formDef.name}-entries.html`;
     a.click();
     URL.revokeObjectURL(url);
+    try {
+      await request('/logs', {
+        method: 'POST',
+        body: {
+          action: 'export_html',
+          detail: `خروجی HTML | فرم ${formDef.name} | رکوردها: ${selectedRowIds.length ? selectedRowIds.length : selectAll ? entries.length : 0} | خروجی تصادفی: ${randomOrder ? 'بله' : 'خیر'} | خروجی با رنگ‌ها: ${includeColors ? 'بله' : 'خیر'}`,
+        },
+      });
+    } catch {}
   };
 
 

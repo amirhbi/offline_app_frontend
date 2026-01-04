@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Typography, List, Space, Button, Table, Tag, message } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Card, Typography, List, Space, Button, Table, Tag, message, Tabs } from 'antd';
 import { FileSearchOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 import { request } from '../api/client';
 
@@ -14,6 +14,7 @@ type LogRow = {
 export default function Logs() {
   const [data, setData] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'user' | 'forms' | 'entry' | 'export'>('all');
   const load = async () => {
     setLoading(true);
     try {
@@ -48,19 +49,57 @@ export default function Logs() {
       a === 'entry_create' ? { label: 'ایجاد رکورد', color: 'green' } :
       a === 'entry_update' ? { label: 'ویرایش رکورد', color: 'gold' } :
       a === 'entry_delete' ? { label: 'حذف رکورد', color: 'red' } :
+      a === 'export_xlsx' ? { label: 'دریافت خروجی XLSX', color: 'blue' } :
+      a === 'export_pdf' ? { label: 'دریافت خروجی PDF', color: 'blue' } :
+      a === 'export_html' ? { label: 'دریافت خروجی HTML', color: 'blue' } :
       { label: action, color: 'default' };
     return <Tag color={meta.color}>{meta.label}</Tag>;
   };
+
+  const categoryOf = (action: string): 'user' | 'forms' | 'entry' | 'export' | 'other' => {
+    const a = String(action || '').toLowerCase();
+    if (a === 'login' || a === 'logout' || a.startsWith('user_')) return 'user';
+    if (a.startsWith('form_')) return 'forms';
+    if (a.startsWith('entry_')) return 'entry';
+    if (a.startsWith('export_')) return 'export';
+    return 'other';
+  };
+  const counts = useMemo(() => {
+    const c = { all: data.length, user: 0, forms: 0, entry: 0, export: 0 };
+    for (const r of data) {
+      const cat = categoryOf(r.action);
+      if (cat === 'user') c.user++;
+      else if (cat === 'forms') c.forms++;
+      else if (cat === 'entry') c.entry++;
+      else if (cat === 'export') c.export++;
+    }
+    return c;
+  }, [data]);
+  const filtered = useMemo(() => {
+    if (activeTab === 'all') return data;
+    return data.filter((r) => categoryOf(r.action) === activeTab);
+  }, [data, activeTab]);
 
   return (
     <Card className="border border-red-300">
       <Typography.Title level={4} className="text-red-600">
           بخش لاگ‌ها
       </Typography.Title>
-    
+      <Tabs
+        className="mb-2"
+        activeKey={activeTab}
+        onChange={(k) => setActiveTab(k as any)}
+        items={[
+          { key: 'all', label: `همه (${counts.all})` },
+          { key: 'user', label: `کاربر (${counts.user})` },
+          { key: 'forms', label: `فرم‌ها (${counts.forms})` },
+          { key: 'entry', label: `رکوردها (${counts.entry})` },
+          { key: 'export', label: `خروجی‌ها (${counts.export})` },
+        ]}
+      />
 
       <Table<LogRow>
-        dataSource={data}
+        dataSource={filtered}
         rowKey="id"
         pagination={{ pageSize: 10 }}
         loading={loading}
