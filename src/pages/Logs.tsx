@@ -42,6 +42,12 @@ export default function Logs() {
       a === 'user_create' ? { label: 'ایجاد کاربر', color: 'green' } :
       a === 'user_update' ? { label: 'ویرایش کاربر', color: 'gold' } :
       a === 'user_delete' ? { label: 'حذف کاربر', color: 'red' } :
+      a === 'form_create' ? { label: 'ایجاد فرم', color: 'green' } :
+      a === 'form_update' ? { label: 'ویرایش فرم', color: 'gold' } :
+      a === 'form_delete' ? { label: 'حذف فرم', color: 'red' } :
+      a === 'entry_create' ? { label: 'ایجاد رکورد', color: 'green' } :
+      a === 'entry_update' ? { label: 'ویرایش رکورد', color: 'gold' } :
+      a === 'entry_delete' ? { label: 'حذف رکورد', color: 'red' } :
       { label: action, color: 'default' };
     return <Tag color={meta.color}>{meta.label}</Tag>;
   };
