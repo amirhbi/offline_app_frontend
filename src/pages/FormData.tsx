@@ -17,6 +17,7 @@ import {
   Modal,
   ColorPicker,
   Tooltip,
+  Tag,
 } from "antd";
 import { CloseCircleTwoTone } from "@ant-design/icons";
 import {
@@ -61,6 +62,9 @@ export default function FormData() {
   const [randomOrder, setRandomOrder] = useState(false);
   const [pdfLandscape, setPdfLandscape] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
+  const [filterView, setFilterView] = useState(false);
+  const [selectedColorsFilter, setSelectedColorsFilter] = useState<string[]>([]);
+  const [onlyColoredRows, setOnlyColoredRows] = useState(false);
   const [existValidations, setExistValidations] = useState<
     Record<string, Set<string>>
   >({});
@@ -1010,6 +1014,53 @@ export default function FormData() {
     }));
   }, [formDef, fieldMeta, exportView, existValidations]);
 
+  function normalizeColorToHex(input: any): string | null {
+    if (!input) return null;
+    const s = String(input).trim();
+    if (s.startsWith('#')) {
+      const hex = s.slice(1);
+      if (hex.length === 3) {
+        const r = hex[0];
+        const g = hex[1];
+        const b = hex[2];
+        return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+      }
+      if (hex.length === 6) {
+        return `#${hex}`.toLowerCase();
+      }
+      return null;
+    }
+    const m = s.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\)/i);
+    if (m) {
+      const r = Math.max(0, Math.min(255, parseInt(m[1], 10) || 0));
+      const g = Math.max(0, Math.min(255, parseInt(m[2], 10) || 0));
+      const b = Math.max(0, Math.min(255, parseInt(m[3], 10) || 0));
+      const toHex = (n: number) => n.toString(16).padStart(2, '0').toLowerCase();
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+    return null;
+  }
+
+  function matchesColorFilter(e: FormEntryRecord, categoryName?: string) {
+    const colors: string[] = [];
+    const base = normalizeColorToHex((e.data || {})["__color"]);
+    if (base) colors.push(base);
+    if (categoryName) {
+      const catCol = normalizeColorToHex((e.data || {})[`${categoryName} - __color`]);
+      if (catCol) colors.push(catCol);
+    } else if (formDef) {
+      for (const c of formDef.categories || []) {
+        const catCol = normalizeColorToHex((e.data || {})[`${c.name} - __color`]);
+        if (catCol) colors.push(catCol);
+      }
+    }
+    if (onlyColoredRows && colors.length === 0) return false;
+    if (selectedColorsFilter.length > 0) {
+      return colors.some((c) => selectedColorsFilter.includes(c));
+    }
+    return true;
+  }
+
   const categoryTables = useMemo(() => {
     const tables: { name: string; columns: any[]; rows: FormEntryRecord[] }[] =
       [];
@@ -1095,13 +1146,14 @@ export default function FormData() {
           const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return ad - bd; // oldest first, newest last
         });
+      const rowsFiltered = rows.filter((e) => matchesColorFilter(e, c.name));
       tables.push({
         name: c.name,
         columns: cols.map((c2) => ({
           ...c2,
           onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
         })),
-        rows,
+        rows: rowsFiltered,
       });
     }
     return tables;
@@ -1288,10 +1340,17 @@ export default function FormData() {
       });
   }, [entries, formDef, fieldMeta]);
 
+  const visibleBaseEntries = useMemo(() => {
+    return filteredBaseEntries.filter((e) => matchesColorFilter(e));
+  }, [filteredBaseEntries, selectedColorsFilter, onlyColoredRows, formDef]);
+
   const exportMode = () => {
     setExportView(true);
   };
 
+  const filterMode = () => {
+    setFilterView(true);
+  };
 
   // Normalize color string into ExcelJS ARGB format (e.g., FFAABBCC)
   const normalizeColorToArgb = (input: any): string | null => {
@@ -1323,6 +1382,42 @@ export default function FormData() {
     }
     return null;
   };
+
+ 
+
+  const availableColors = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of entries) {
+      const base = (e.data || {})["__color"];
+      const hexBase = normalizeColorToHex(base);
+      if (hexBase) set.add(hexBase);
+      if (formDef) {
+        for (const c of formDef.categories || []) {
+          const catCol = (e.data || {})[`${c.name} - __color`];
+          const hexCat = normalizeColorToHex(catCol);
+          if (hexCat) set.add(hexCat);
+        }
+      }
+    }
+    return Array.from(set);
+  }, [entries, formDef]);
+
+  const colorCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of entries) {
+      const base = normalizeColorToHex((e.data || {})["__color"]);
+      if (base) map[base] = (map[base] || 0) + 1;
+      if (formDef) {
+        for (const c of formDef.categories || []) {
+          const catCol = normalizeColorToHex((e.data || {})[`${c.name} - __color`]);
+          if (catCol) map[catCol] = (map[catCol] || 0) + 1;
+        }
+      }
+    }
+    return map;
+  }, [entries, formDef]);
+
+ 
 
   const downloadXlsx = async () => {
     if (!formDef) return;
@@ -2403,6 +2498,7 @@ export default function FormData() {
           <Button onClick={() => navigate(`${prePath}/structure`)}>بازگشت</Button>
           <Button onClick={load}>بازخوانی</Button>
           <Button onClick={exportMode}>دریافت خروجی</Button>
+          <Button onClick={filterMode}>فیلتر داده ها</Button>
           <Button type="primary" onClick={startInlineAdd} disabled={inlineAdd || !hasWriteAccess}>
             افزودن داده جدید
           </Button>
@@ -2511,6 +2607,58 @@ export default function FormData() {
 
         </Card>
       )}
+
+      {filterView && (
+        <Card size="small" className="!mb-4">
+          <div className="flex items-center justify-between">
+            <Typography.Text>فیلتر بر اساس رنگ</Typography.Text>
+            <div className="flex gap-2">
+              <Checkbox
+                checked={onlyColoredRows}
+                onChange={(e) => setOnlyColoredRows(e.target.checked)}
+              >
+                فقط سطرهای دارای رنگ
+              </Checkbox>
+              <Button
+                onClick={() => {
+                  setSelectedColorsFilter([]);
+                  setOnlyColoredRows(false);
+                }}
+              >
+                پاک کردن فیلتر
+              </Button>
+              <Button onClick={() => setFilterView(false)}>بستن فیلتر</Button>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-8">
+            {availableColors.length === 0 && (
+              <Typography.Text type="secondary">رنگی برای فیلتر وجود ندارد</Typography.Text>
+            )}
+            {availableColors.map((col) => {
+              const sel = selectedColorsFilter.includes(col);
+              const cnt = colorCounts[col] || 0;
+              return (
+                <Tag
+                  key={col}
+                  color={col}
+                  onClick={() => {
+                    setSelectedColorsFilter((prev) =>
+                      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col]
+                    );
+                  }}
+                  style={{ cursor: "pointer", border: sel ? "2px solid #333" : undefined }}
+                >
+                  {col} — {cnt}
+                </Tag>
+              );
+            })}
+          </div>
+          <Typography.Paragraph className="mt-2">
+            با انتخاب رنگ‌ها، فقط ردیف‌های دارای همان رنگ نمایش داده می‌شوند.
+          </Typography.Paragraph>
+        </Card>
+      )}
+
 
       {inlineAdd && (
         <>
@@ -2779,7 +2927,7 @@ export default function FormData() {
           </Typography.Title>
           <Table
             rowKey="id"
-            dataSource={filteredBaseEntries}
+            dataSource={visibleBaseEntries}
             columns={baseColumns as any}
             loading={loading}
             pagination={{ pageSize: 12 }}
