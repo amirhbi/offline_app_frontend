@@ -3,6 +3,7 @@ import { Table, Typography, Card, Button, Space, Tag, Modal, Form, Input, Select
 import { PlusOutlined } from '@ant-design/icons';
 import { createUser, deleteUser, listUsers, updateUser, UserRecord } from '../api/users';
 import { listForms, FormRecord } from '../api/forms';
+import { useAuth } from '../auth/AuthContext';
 
 type L3UserRow = UserRecord;
 
@@ -20,6 +21,19 @@ export default function L3Users() {
   const formNameById = useMemo<Record<string, string>>(
     () => Object.fromEntries(formsList.map((f) => [f.id, f.name])),
     [formsList]
+  );
+  const { userData, role } = useAuth();
+  const isSuperAdmin = role === 'super_admin';
+  const allowedFormsOptions = useMemo(
+    () => {
+      const all = formsList.map((f) => ({ value: f.id, label: f.name }));
+      if (isSuperAdmin) return all;
+      const allowed = new Set<string>(
+        (userData?.forms || []).map((id: any) => (id?.toString?.() || String(id)))
+      );
+      return all.filter((opt) => allowed.has(opt.value));
+    },
+    [formsList, userData, isSuperAdmin]
   );
   const truncateText = (s: string, max = 20) => (s && s.length > max ? s.slice(0, max) + '...' : s);
   const reportOptions = useMemo(() => formsList.map((f) => `گزارش ${f.name}`), [formsList]);
@@ -263,7 +277,7 @@ export default function L3Users() {
             <Input.Password placeholder="••••••••" />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
-            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
+            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={allowedFormsOptions} />
           </Form.Item>
           <Form.Item name="forms_view" label="دسترسی مشاهده فرم‌ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
@@ -303,7 +317,7 @@ export default function L3Users() {
             <Input.Password placeholder="رمز عبور جدید" />
           </Form.Item>
           <Form.Item name="forms" label="دسترسی فرم‌ها">
-            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
+            <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={allowedFormsOptions} />
           </Form.Item>
           <Form.Item name="forms_view" label="دسترسی مشاهده فرم‌ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
