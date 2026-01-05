@@ -17,8 +17,32 @@ import {
   Modal,
   ColorPicker,
   Tooltip,
+  Tabs,
   Tag,
 } from "antd";
+import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend } from "chart.js";
+import { Doughnut } from "react-chartjs-2";
+ChartJS.register(ArcElement, ChartTooltip, Legend);
+const centerTextPlugin = {
+  id: "centerText",
+  afterDraw: (chart: any) => {
+    const ds = chart?.data?.datasets?.[0];
+    if (!ds) return;
+    const total = (ds.data || []).reduce((a: number, b: any) => a + (typeof b === "number" ? b : Number(b) || 0), 0);
+    const meta = chart.getDatasetMeta(0);
+    const x = meta?.dataset?.x ?? (chart.chartArea.left + chart.chartArea.right) / 2;
+    const y = meta?.dataset?.y ?? (chart.chartArea.top + chart.chartArea.bottom) / 2;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "600 14px system-ui, -apple-system, Segoe UI, Roboto, Vazirmatn, Arial, sans-serif";
+    ctx.fillStyle = "#333";
+    ctx.fillText(`کل: ${total}`, x, y);
+    ctx.restore();
+  },
+};
+ChartJS.register(centerTextPlugin);
 import { CloseCircleTwoTone } from "@ant-design/icons";
 import {
   DatePicker as DatePickerJalali,
@@ -1402,20 +1426,82 @@ export default function FormData() {
     return Array.from(set);
   }, [entries, formDef]);
 
-  const colorCounts = useMemo(() => {
+  const chartCounts = useMemo(() => {
     const map: Record<string, number> = {};
-    for (const e of entries) {
+    let total = 0;
+    if (!formDef) return { colorCounts: map, totalRows: 0 };
+    const keysBase = (formDef.fields || []).map((f) => f.label);
+    const baseRows = entries.filter((e) =>
+      keysBase.some((k) => {
+        const meta = fieldMeta[k];
+        return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
+      })
+    );
+    total += baseRows.length;
+    for (const e of baseRows) {
       const base = normalizeColorToHex((e.data || {})["__color"]);
       if (base) map[base] = (map[base] || 0) + 1;
-      if (formDef) {
-        for (const c of formDef.categories || []) {
-          const catCol = normalizeColorToHex((e.data || {})[`${c.name} - __color`]);
-          if (catCol) map[catCol] = (map[catCol] || 0) + 1;
-        }
+    }
+    for (const c of formDef.categories || []) {
+      if (!c.fields || c.fields.length === 0) continue;
+      const keys = (c.fields || []).map((f) => `${c.name} - ${f.label}`);
+      const catRows = entries.filter((e) =>
+        keys.some((k) => {
+          const meta = fieldMeta[k];
+          return meta ? hasMeaningfulValue(meta.type, (e.data || {})[k]) : false;
+        })
+      );
+      total += catRows.length;
+      for (const e of catRows) {
+        const catCol = normalizeColorToHex((e.data || {})[`${c.name} - __color`]);
+        if (catCol) map[catCol] = (map[catCol] || 0) + 1;
       }
     }
-    return map;
-  }, [entries, formDef]);
+    return { colorCounts: map, totalRows: total };
+  }, [entries, formDef, fieldMeta]);
+
+  const chartLabels = useMemo(() => Object.keys(chartCounts.colorCounts), [chartCounts]);
+  const chartData = useMemo(() => {
+    const labels = chartLabels;
+    const values = labels.map((l) => chartCounts.colorCounts[l]);
+    const coloredTotal = values.reduce((a, b) => a + b, 0);
+    const noColor = Math.max(0, chartCounts.totalRows - coloredTotal);
+    const labelsWithNoColor = noColor > 0 ? [...labels, "بدون رنگ"] : labels;
+    const valuesWithNoColor = noColor > 0 ? [...values, noColor] : values;
+    const bgColors = labelsWithNoColor.map((l) => (l === "بدون رنگ" ? "#e6e6e6" : l));
+    return {
+      labels: labelsWithNoColor,
+      datasets: [
+        {
+          data: valuesWithNoColor,
+          backgroundColor: bgColors,
+          borderColor: labelsWithNoColor.map(() => "#ffffff"),
+          borderWidth: 1,
+        },
+      ],
+    };
+  }, [chartLabels, chartCounts]);
+  const chartOptions = useMemo(() => ({
+    plugins: {
+      legend: { position: "right" as const, rtl: true, labels: { usePointStyle: true } },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: (ctx: any) => {
+            const label = ctx.label || "";
+            const value = ctx.parsed as number;
+            const data = ctx.dataset.data as number[];
+            const total = data.reduce((a, b) => a + (typeof b === "number" ? b : Number(b) || 0), 0);
+            const pct = total ? (value * 100) / total : 0;
+            return `${label}: ${value} (${pct.toFixed(1)}%)`;
+          },
+        },
+      },
+      centerText: {},
+    },
+    responsive: true,
+    maintainAspectRatio: false,
+  }), []);
 
  
 
@@ -2636,7 +2722,7 @@ export default function FormData() {
             )}
             {availableColors.map((col) => {
               const sel = selectedColorsFilter.includes(col);
-              const cnt = colorCounts[col] || 0;
+              const cnt = chartCounts.colorCounts[col] || 0;
               return (
                 <Tag
                   key={col}
@@ -2653,9 +2739,131 @@ export default function FormData() {
               );
             })}
           </div>
-          <Typography.Paragraph className="mt-2">
-            با انتخاب رنگ‌ها، فقط ردیف‌های دارای همان رنگ نمایش داده می‌شوند.
-          </Typography.Paragraph>
+          <Tabs
+            className="mt-4"
+            defaultActiveKey="data"
+            items={[
+              {
+                key: "data",
+                label: "داده‌ها",
+                children: (
+                  <div className="mt-2">
+                    {formDef?.fields && formDef.fields.length > 0 && (
+                      <>
+                        <Typography.Title level={5} className="!mt-2 !mb-2">
+                          فیلدهای اصلی
+                        </Typography.Title>
+                        <Table
+                          rowKey="id"
+                          dataSource={visibleBaseEntries}
+                          columns={baseColumns as any}
+                          loading={loading}
+                          pagination={{ pageSize: 12 }}
+                          scroll={{ x: "max-content" }}
+                          rowSelection={
+                            exportView
+                              ? {
+                                  selectedRowKeys: selectedRowIds,
+                                  onChange: (keys) => setSelectedRowIds(keys as string[]),
+                                }
+                              : undefined
+                          }
+                          onRow={(row: any) => {
+                            const color = (row?.data || {})["__color"];
+                            return { style: color ? { backgroundColor: String(color) } : {} };
+                          }}
+                          expandable={
+                            formDef?.hasSubFields && formDef?.subFields && formDef.subFields.length > 0
+                              ? {
+                                  expandedRowRender: (record: any) => {
+                                    const subFieldRows = (record?.data?.subFieldsData || []) as any[];
+                                    if (subFieldRows.length === 0) {
+                                      return <Typography.Text type="secondary">بدون زیرفیلد</Typography.Text>;
+                                    }
+                                    const subCols: any[] = [
+                                      {
+                                        title: "ردیف",
+                                        key: "index",
+                                        width: 60,
+                                        align: "center",
+                                        render: (_: any, __: any, index: number) => index + 1,
+                                      },
+                                      ...(formDef.subFields || []).map((sf) => ({
+                                        title: sf.label,
+                                        dataIndex: sf.label,
+                                        key: sf.label,
+                                        render: (val: any) =>
+                                          sf.type === "checkbox"
+                                            ? typeof val === "boolean"
+                                              ? val
+                                                ? "✓"
+                                                : "✗"
+                                              : "—"
+                                            : sf.type === "date"
+                                              ? formatToJalali(val)
+                                              : val,
+                                      })),
+                                    ];
+                                    return (
+                                      <Table
+                                        rowKey={(_, idx) => `sub-${idx}`}
+                                        dataSource={subFieldRows}
+                                        columns={subCols}
+                                        pagination={false}
+                                        size="small"
+                                        bordered
+                                      />
+                                    );
+                                  },
+                                  rowExpandable: (record: any) =>
+                                    (record?.data?.subFieldsData || []).length > 0,
+                                }
+                              : undefined
+                          }
+                        />
+                      </>
+                    )}
+                    {categoryTables.map((cat) => (
+                      <div key={cat.name}>
+                        <Typography.Title level={5} className="!mt-6 !mb-2">
+                          {cat.name}
+                        </Typography.Title>
+                        <Table
+                          rowKey="id"
+                          dataSource={cat.rows}
+                          columns={cat.columns as any}
+                          loading={loading}
+                          pagination={{ pageSize: 12 }}
+                          scroll={{ x: "max-content" }}
+                          rowSelection={
+                            exportView
+                              ? {
+                                  selectedRowKeys: selectedRowIds,
+                                  onChange: (keys) => setSelectedRowIds(keys as string[]),
+                                }
+                              : undefined
+                          }
+                          onRow={(row: any) => {
+                            const color = (row?.data || {})[`${cat.name} - __color`];
+                            return { style: color ? { backgroundColor: String(color) } : {} };
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ),
+              },
+              {
+                key: "chart",
+                label: "نمودار",
+                children: (
+                  <div className="mt-2" style={{ height: 360 }}>
+                    <Doughnut data={chartData} options={chartOptions} />
+                  </div>
+                ),
+              },
+            ]}
+          />
         </Card>
       )}
 
@@ -2920,7 +3128,7 @@ export default function FormData() {
       )}
 
       {/* Base fields table (only if there are base fields) */}
-      {formDef?.fields && formDef.fields.length > 0 && (
+      {!filterView && formDef?.fields && formDef.fields.length > 0 && (
         <>
           <Typography.Title level={5} className="!mt-6 !mb-2">
             فیلدهای اصلی
@@ -2997,7 +3205,7 @@ export default function FormData() {
       )}
 
       {/* Category tables */}
-      {categoryTables.map((cat) => (
+      {!filterView && categoryTables.map((cat) => (
         <div key={cat.name}>
           <Typography.Title level={5} className="!mt-6 !mb-2">
             {cat.name}
