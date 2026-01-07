@@ -42,7 +42,7 @@ export default function AdminLayout() {
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 600 }}>خوش آمدید، مدیر کل (L1)</div>
+          <div style={{ fontWeight: 600 }}>خوش آمدید، مدیر کل</div>
           <Button icon={<LogoutOutlined />} onClick={() => { signOut(); navigate('/login'); }}>
             خروج
           </Button>

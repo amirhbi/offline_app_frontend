@@ -20,7 +20,7 @@ export default function L2Layout() {
 
   const items = [
     { key: 'dashboard', icon: <DashboardOutlined />, label: 'داشبورد بخشی' },
-    { key: 'l3-users', icon: <TeamOutlined />, label: 'مدیریت کاربران (l3)' },
+    { key: 'l3-users', icon: <TeamOutlined />, label: 'مدیریت کاربران' },
     { key: 'structure', icon: <DatabaseOutlined />, label: 'مدیریت داده‌ها' },
   ];
 
@@ -47,7 +47,7 @@ export default function L2Layout() {
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 600 }}>خوش آمدید، {(userData?.nickname || userData?.username || 'کاربر')} (L2)</div>
+          <div style={{ fontWeight: 600 }}>خوش آمدید، {(userData?.nickname || userData?.username || 'کاربر')} </div>
           <Button icon={<LogoutOutlined />} onClick={() => { signOut(); navigate('/login'); }}>
             خروج
           </Button>

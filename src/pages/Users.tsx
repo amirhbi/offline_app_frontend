@@ -232,7 +232,7 @@ export default function Users() {
                 'دسترسی داده نشده است'
               ),
           },
-          {
+          /* {
             title: 'دسترسی گزارش‌ها',
             dataIndex: 'reports',
             render: (reports: string[]) =>
@@ -245,7 +245,7 @@ export default function Users() {
               ) : (
                 'دسترسی داده نشده است'
               ),
-          },
+          }, */
           {
             title: 'دسترسی لاگ‌ها',
             dataIndex: 'logs',
@@ -309,14 +309,14 @@ export default function Users() {
           <Form.Item name="forms_view" label="دسترسی نمایشی فرم ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
-          <Form.Item name="reports" label="دسترسی گزارش‌ها">
+          {/* <Form.Item name="reports" label="دسترسی گزارش‌ها">
             <Select
               mode="multiple"
               placeholder="انتخاب گزارش‌ها (براساس فرم‌های انتخاب‌شده)"
               options={filteredCreateReportOptions}
               disabled={(selectedCreateForms || []).length === 0}
             />
-          </Form.Item>
+          </Form.Item> */}
           <Form.Item name="logs" label="دسترسی لاگ‌ها">
             <Select mode="multiple" placeholder="انتخاب لاگ‌ها" options={logsOptions.map((l) => ({ value: l, label: l }))} />
           </Form.Item>
@@ -352,14 +352,14 @@ export default function Users() {
           <Form.Item name="forms_view" label="دسترسی نمایشی فرم ها" >
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
-          <Form.Item name="reports" label="دسترسی گزارش‌ها">
+          {/* <Form.Item name="reports" label="دسترسی گزارش‌ها">
             <Select
               mode="multiple"
               placeholder="انتخاب گزارش‌ها (براساس فرم‌های انتخاب‌شده)"
               options={filteredEditReportOptions}
               disabled={(selectedEditForms || []).length === 0}
             />
-          </Form.Item>
+          </Form.Item> */}
           <Form.Item name="logs" label="دسترسی لاگ‌ها">
             <Select mode="multiple" placeholder="انتخاب لاگ‌ها" options={logsOptions.map((l) => ({ value: l, label: l }))} />
           </Form.Item>

@@ -61,7 +61,6 @@ export default function L3Layout() {
         >
           <div style={{ fontWeight: 600 }}>
             خوش آمدید، {userData?.nickname || userData?.username || "کاربر"}{" "}
-            (L2)
           </div>
           <Button
             icon={<LogoutOutlined />}

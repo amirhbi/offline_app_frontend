@@ -116,9 +116,9 @@ export default function L3Users() {
       setUsers((prev) => [created, ...prev]);
       setCreateOpen(false);
       createForm.resetFields();
-      message.success('کاربر l3 جدید ایجاد شد');
+      message.success('کاربر سطح ۳ جدید ایجاد شد');
     } catch (err: any) {
-      message.error(err?.message || 'ایجاد کاربر l3 ناموفق بود');
+      message.error(err?.message || 'ایجاد کاربر سطح ۳ ناموفق بود');
     }
   };
 
@@ -162,9 +162,9 @@ export default function L3Users() {
       setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updated : u)));
       setEditOpen(false);
       setEditingUser(null);
-      message.success('ویرایش کاربر l3 انجام شد');
+      message.success('ویرایش کاربر سطح ۳ انجام شد');
     } catch (err: any) {
-      message.error(err?.message || 'ویرایش کاربر l3 ناموفق بود');
+      message.error(err?.message || 'ویرایش کاربر سطح ۳ ناموفق بود');
     }
   };
 
@@ -172,9 +172,9 @@ export default function L3Users() {
     try {
       await deleteUser(id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
-      message.success('کاربر l3 حذف شد');
+      message.success('کاربر سطح ۳ حذف شد');
     } catch (err: any) {
-      message.error(err?.message || 'حذف کاربر l3 ناموفق بود');
+      message.error(err?.message || 'حذف کاربر سطح ۳ ناموفق بود');  
     }
   };
 
@@ -182,12 +182,12 @@ export default function L3Users() {
     <Card className="border border-red-300">
       <Space style={{ width: '100%', justifyContent: 'space-between' }} className="mb-4">
         <Typography.Title level={4} className="!mb-0 text-red-600">
-          مدیریت کاربران (l3)
+          مدیریت کاربران
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>ایجاد کاربر l3 جدید</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>ایجاد کاربر سطح ۳ جدید</Button>
       </Space>
       <Typography.Paragraph className="mt-0">
-        ایجاد، ویرایش و حذف حساب‌های کاربری اپراتورهای سطح ۳ (l3).
+        ایجاد، ویرایش و حذف حساب‌های کاربری اپراتورهای سطح ۳.
       </Typography.Paragraph>
       <Table<L3UserRow>
         dataSource={users}
@@ -195,7 +195,7 @@ export default function L3Users() {
         loading={loading}
         pagination={false}
         columns={[
-          { title: 'نام کاربری l3', dataIndex: 'username' },
+          { title: 'نام کاربری', dataIndex: 'username' },
           { title: 'سطح', dataIndex: 'role' },
           { title: 'نام نمایشی', dataIndex: 'nickname' },
           {
@@ -222,7 +222,7 @@ export default function L3Users() {
               </Space>
             ),
           },
-          {
+          /* {
             title: 'دسترسی گزارش‌ها',
             dataIndex: 'reports',
             render: (reports: string[]) => (
@@ -232,7 +232,7 @@ export default function L3Users() {
                 ))}
               </Space>
             ),
-          },
+          }, */
           {
             title: 'عملیات',
             render: (_: any, record: L3UserRow) => (
@@ -256,7 +256,7 @@ export default function L3Users() {
       {/* Create Modal */}
       <Modal
         open={createOpen}
-        title="ایجاد کاربر l3 جدید"
+        title="ایجاد کاربر سطح ۳ جدید"
         okText="ایجاد"
         cancelText="انصراف"
         onCancel={() => setCreateOpen(false)}
@@ -282,21 +282,21 @@ export default function L3Users() {
           <Form.Item name="forms_view" label="دسترسی مشاهده فرم‌ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
-          <Form.Item name="reports" label="دسترسی گزارش‌ها">
+          {/* <Form.Item name="reports" label="دسترسی گزارش‌ها">
             <Select
               mode="multiple"
               placeholder="انتخاب گزارش‌ها (براساس فرم‌های انتخاب‌شده)"
               options={filteredCreateReportOptions}
               disabled={(selectedCreateForms || []).length === 0}
             />
-          </Form.Item>
+          </Form.Item> */}
         </Form>
       </Modal>
 
       {/* Edit Modal */}
       <Modal
         open={editOpen}
-        title="ویرایش دسترسی کاربر l3"
+        title="ویرایش دسترسی کاربر سطح ۳"
         okText="ذخیره"
         cancelText="انصراف"
         onCancel={() => { setEditOpen(false); setEditingUser(null); }}
@@ -322,14 +322,14 @@ export default function L3Users() {
           <Form.Item name="forms_view" label="دسترسی مشاهده فرم‌ها">
             <Select mode="multiple" placeholder="انتخاب فرم‌ها" options={formsList.map((f) => ({ value: f.id, label: f.name }))} />
           </Form.Item>
-          <Form.Item name="reports" label="دسترسی گزارش‌ها">
+          {/* <Form.Item name="reports" label="دسترسی گزارش‌ها">
             <Select
               mode="multiple"
               placeholder="انتخاب گزارش‌ها (براساس فرم‌های انتخاب‌شده)"
               options={filteredEditReportOptions}
               disabled={(selectedEditForms || []).length === 0}
             />
-          </Form.Item>
+          </Form.Item> */}
         </Form>
       </Modal>
     </Card>
