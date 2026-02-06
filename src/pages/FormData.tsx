@@ -89,6 +89,7 @@ export default function FormData() {
   const [filterView, setFilterView] = useState(false);
   const [selectedColorsFilter, setSelectedColorsFilter] = useState<string[]>([]);
   const [onlyColoredRows, setOnlyColoredRows] = useState(false);
+  const [searchText, setSearchText] = useState("");
   const [existValidations, setExistValidations] = useState<
     Record<string, Set<string>>
   >({});
@@ -1171,17 +1172,27 @@ export default function FormData() {
           return ad - bd; // oldest first, newest last
         });
       const rowsFiltered = rows.filter((e) => matchesColorFilter(e, c.name));
+      const finalRows = searchText.trim()
+        ? rowsFiltered.filter((e) =>
+            Object.values(e.data || {}).some(
+              (val) =>
+                val &&
+                String(val).toLowerCase().includes(searchText.toLowerCase().trim())
+            )
+          )
+        : rowsFiltered;
+
       tables.push({
         name: c.name,
         columns: cols.map((c2) => ({
           ...c2,
           onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
         })),
-        rows: rowsFiltered,
+        rows: finalRows,
       });
     }
     return tables;
-  }, [formDef, entries, fieldMeta, exportView, existValidations]);
+  }, [formDef, entries, fieldMeta, exportView, existValidations, searchText]);
 
   // Inline add columns: split into base and per-category rows
   const addBaseColumns = useMemo(() => {
@@ -1365,8 +1376,17 @@ export default function FormData() {
   }, [entries, formDef, fieldMeta]);
 
   const visibleBaseEntries = useMemo(() => {
-    return filteredBaseEntries.filter((e) => matchesColorFilter(e));
-  }, [filteredBaseEntries, selectedColorsFilter, onlyColoredRows, formDef]);
+    const res = filteredBaseEntries.filter((e) => matchesColorFilter(e));
+    if (searchText.trim()) {
+      const term = searchText.toLowerCase().trim();
+      return res.filter((e) =>
+        Object.values(e.data || {}).some(
+          (val) => val && String(val).toLowerCase().includes(term)
+        )
+      );
+    }
+    return res;
+  }, [filteredBaseEntries, selectedColorsFilter, onlyColoredRows, formDef, searchText]);
 
   const exportMode = () => {
     setExportView(true);
@@ -2705,10 +2725,18 @@ export default function FormData() {
               >
                 فقط سطرهای دارای رنگ
               </Checkbox>
+              <Input
+                placeholder="جستجو..."
+                allowClear
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{ width: 200 }}
+              />
               <Button
                 onClick={() => {
                   setSelectedColorsFilter([]);
                   setOnlyColoredRows(false);
+                  setSearchText("");
                 }}
               >
                 پاک کردن فیلتر
