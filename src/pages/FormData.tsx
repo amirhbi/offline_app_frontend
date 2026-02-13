@@ -362,8 +362,9 @@ export default function FormData() {
     switch (meta.type) {
       case "text":
         return (
-          <Input
+          <Input.TextArea
             value={value}
+            autoSize={{ minRows: 1, maxRows: 6 }}
             onChange={(e) =>
               setInlineValues((p) => ({ ...p, [key]: e.target.value }))
             }
@@ -1018,7 +1019,11 @@ export default function FormData() {
           if (meta?.type === "date") {
             return formatToJalali(val);
           }
-          return val;
+          return (
+            <div style={{ whiteSpace: "pre-wrap" }}>
+              {val}
+            </div>
+          );
         },
       });
     }
@@ -1140,7 +1145,11 @@ export default function FormData() {
             if (meta?.type === "date") {
               return formatToJalali(val);
             }
-            return val;
+            return (
+              <div style={{ whiteSpace: "pre-wrap" }}>
+                {val}
+              </div>
+            );
           },
         });
       }
