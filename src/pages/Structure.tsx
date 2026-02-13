@@ -8,6 +8,7 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Select,
   Checkbox,
   Popconfirm,
@@ -38,6 +39,7 @@ interface CategoryDefinition {
 interface FormDefinition {
   id: string;
   name: string;
+  orderPriority?: number;
   fields: FormField[];
   categories?: CategoryDefinition[];
   subFields?: FormField[];
@@ -65,6 +67,7 @@ export default function Structure() {
     const mapped: FormDefinition[] = (data || []).map((f: any) => ({
       id: f._id ?? f.id,
       name: f.name,
+      orderPriority: typeof f.orderPriority === 'number' ? f.orderPriority : 0,
       fields: f.fields || [],
       categories: f.categories || [],
       subFields: f.subFields || [],
@@ -72,7 +75,12 @@ export default function Structure() {
       updatedAt: f.updatedAt || f.createdAt || new Date().toISOString(),
       pdfDescription: f.pdfDescription || '',
       pdfImage: f.pdfImage || '',
-    }));
+    })).sort((a, b) => {
+      const aPriority = typeof a.orderPriority === 'number' ? a.orderPriority : 0;
+      const bPriority = typeof b.orderPriority === 'number' ? b.orderPriority : 0;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      return a.name.localeCompare(b.name, 'fa');
+    });
     setForms(mapped);
   };
 
@@ -83,7 +91,7 @@ export default function Structure() {
   const openCreate = () => {
     setEditingForm(null);
     form.resetFields();
-    form.setFieldsValue({ name: '', fields: [], subFields: [], categories: [], pdfDescription: '', pdfImage: '', hasSubFields: false });
+    form.setFieldsValue({ name: '', orderPriority: 0, fields: [], subFields: [], categories: [], pdfDescription: '', pdfImage: '', hasSubFields: false });
     setIsModalOpen(true);
   };
 
@@ -92,6 +100,7 @@ export default function Structure() {
     form.resetFields();
     form.setFieldsValue({
       name: record.name,
+      orderPriority: typeof record.orderPriority === 'number' ? record.orderPriority : 0,
       hasSubFields: record.hasSubFields || false,
       fields: record.fields.map((f) => ({
         label: f.label,
@@ -153,6 +162,7 @@ export default function Structure() {
 
       const payload: UpsertFormPayload = {
         name: values.name,
+        orderPriority: typeof values.orderPriority === 'number' ? values.orderPriority : 0,
         fields: normalizedFields,
         subFields: normalizedSubFields,
         categories: normalizedCategories,
@@ -273,6 +283,10 @@ export default function Structure() {
             rules={[{ required: true, message: 'نام فرم الزامی است' }]}
           >
             <Input placeholder="مثلاً: فرم شکایات" />
+          </Form.Item>
+
+          <Form.Item name="orderPriority" label="اولویت نمایش">
+            <InputNumber min={0} step={1} style={{ width: 200 }} />
           </Form.Item>
 
           <Form.Item name="hasSubFields" valuePropName="checked" label="استفاده از زیرفیلد برای فیلدهای اصلی">

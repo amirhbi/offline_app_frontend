@@ -17,6 +17,7 @@ export type FormCategory = {
 export type FormRecord = {
   id: string;
   name: string;
+  orderPriority?: number;
   fields: FormField[];
   categories?: FormCategory[];
   subFields?: FormField[];
