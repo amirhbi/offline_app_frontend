@@ -16,6 +16,7 @@ import {
   Switch,
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { DragOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
 import { listForms, createForm as apiCreateForm, updateForm as apiUpdateForm, deleteForm as apiDeleteForm, UpsertFormPayload } from '../api/forms';
 
@@ -61,6 +62,8 @@ export default function Structure() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingForm, setEditingForm] = useState<FormDefinition | null>(null);
   const [form] = Form.useForm();
+  const [dragState, setDragState] = useState<{ listKey: string; index: number } | null>(null);
+  const [dragOverState, setDragOverState] = useState<{ listKey: string; index: number } | null>(null);
 
   const fetchForms = async () => {
     const data = await listForms();
@@ -313,129 +316,171 @@ export default function Structure() {
           </Form.Item>
 
           <Form.List name="fields">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map((field) => (
-                  <Card key={field.key} size="small" className="mb-3">
-                    <Space align="start" wrap>
-                      <Form.Item
-                        name={[field.name, 'label']}
-                        label="برچسب فیلد"
-                        rules={[
-                          { required: true, message: 'برچسب الزامی است' },
-                          {
-                            validator: async (_: any, value: string) => {
-                              const list = (form.getFieldValue('fields') || []) as any[];
-                              const dupCount = list.filter((f, idx) => (f?.label === value) && idx !== field.name).length;
-                              if (value && dupCount > 0) {
-                                return Promise.reject(new Error('برچسب فیلد نباید تکراری باشد'));
-                              }
-                              return Promise.resolve();
-                            },
-                          },
-                        ]}
-                      >
-                        <Input style={{ width: 180 }} />
-                      </Form.Item>
-
-                      <Form.Item
-                        name={[field.name, 'type']}
-                        label="نوع داده"
-                        rules={[{
-                          required: true,
-                          message: 'نوع داده را انتخاب کنید',
-                        }]}
-                      >
-                        <Select
-                          style={{ width: 200 }}
-                          options={[
-                            { value: 'text', label: 'متن' },
-                            { value: 'number', label: 'عدد' },
-                            { value: 'date', label: 'تاریخ' },
-                            { value: 'select', label: 'انتخابی' },
-                            { value: 'checkbox', label: 'چک‌باکس' },
-                            { value: 'lookup', label: 'جستجو از فرم دیگر' },
-                            { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
-                          ]}
-                        />
-                      </Form.Item>
-
-                      <Form.Item
-                        name={[field.name, 'required']}
-                        valuePropName="checked"
-                        label="ضروری"
-                      >
-                        <Checkbox />
-                      </Form.Item>
-
-                      <Form.Item
-                        noStyle
-                        shouldUpdate={(prev, cur) =>
-                          prev?.fields?.[field.name]?.type !==
-                          cur?.fields?.[field.name]?.type
-                        }
-                      >
-                        {() => {
-                          const type = form.getFieldValue(['fields', field.name, 'type']);
-                          if (type === 'select') {
-                            return (
-                              <Form.Item
-                                name={[field.name, 'optionsText']}
-                                label="گزینه‌ها (با کاما جدا کنید)"
-                              >
-                                <Input
-                                  style={{ width: 280 }}
-                                  placeholder="مثلاً: گزینه۱, گزینه۲, گزینه۳"
-                                />
-                              </Form.Item>
-                            );
+            {(fields, { add, remove, move }) => {
+              const listKey = 'fields';
+              return (
+                <>
+                  {fields.map((field) => {
+                    const isDragging = dragState?.listKey === listKey && dragState.index === field.name;
+                    const isDragOver = dragOverState?.listKey === listKey && dragOverState.index === field.name;
+                    return (
+                      <Card
+                        key={field.key}
+                        size="small"
+                        className={`mb-3 transition-all duration-200 ${isDragging ? 'opacity-60 scale-[0.98]' : ''} ${isDragOver ? 'shadow-md ring-2 ring-blue-300 -translate-y-0.5' : ''}`}
+                        onDragOver={(e) => {
+                          if (dragState?.listKey === listKey) {
+                            e.preventDefault();
+                            if (dragOverState?.listKey !== listKey || dragOverState.index !== field.name) {
+                              setDragOverState({ listKey, index: field.name });
+                            }
                           }
-                          if (type === 'lookup' || type === 'exist') {
-                            return (
-                              <>
-                                <Form.Item
-                                  name={[field.name, 'lookupFormId']}
-                                  label="انتخاب فرم مبدا"
-                                  rules={[{ required: true }]}
-                                >
-                                  <Select
-                                    style={{ width: 220 }}
-                                    options={forms.map((f) => ({ value: f.id, label: f.name }))}
-                                  />
-                                </Form.Item>
-                                <Form.Item
-                                  name={[field.name, 'lookupSourceField']}
-                                  label="فیلد کد/شناسه در فرم مبدا"
-                                  rules={[{ required: true }]}
-                                >
-                                  <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
-                                </Form.Item>
-                              </>
-                            );
-                          }
-                          return null;
                         }}
-                      </Form.Item>
+                        onDragLeave={() => {
+                          if (dragOverState?.listKey === listKey && dragOverState.index === field.name) {
+                            setDragOverState(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          if (dragState?.listKey === listKey) {
+                            e.preventDefault();
+                            if (dragState.index !== field.name) {
+                              move(dragState.index, field.name);
+                            }
+                          }
+                          setDragState(null);
+                          setDragOverState(null);
+                        }}
+                      >
+                        <Space align="start" wrap>
+                          <span
+                            draggable
+                            onDragStart={() => setDragState({ listKey, index: field.name })}
+                            onDragEnd={() => {
+                              setDragState(null);
+                              setDragOverState(null);
+                            }}
+                            style={{ cursor: 'grab', fontSize: 16, paddingTop: 6 }}
+                          >
+                            <DragOutlined />
+                          </span>
+                          <Form.Item
+                            name={[field.name, 'label']}
+                            label="برچسب فیلد"
+                            rules={[
+                              { required: true, message: 'برچسب الزامی است' },
+                              {
+                                validator: async (_: any, value: string) => {
+                                  const list = (form.getFieldValue('fields') || []) as any[];
+                                  const dupCount = list.filter((f, idx) => (f?.label === value) && idx !== field.name).length;
+                                  if (value && dupCount > 0) {
+                                    return Promise.reject(new Error('برچسب فیلد نباید تکراری باشد'));
+                                  }
+                                  return Promise.resolve();
+                                },
+                              },
+                            ]}
+                          >
+                            <Input style={{ width: 180 }} />
+                          </Form.Item>
 
+                          <Form.Item
+                            name={[field.name, 'type']}
+                            label="نوع داده"
+                            rules={[{
+                              required: true,
+                              message: 'نوع داده را انتخاب کنید',
+                            }]}
+                          >
+                            <Select
+                              style={{ width: 200 }}
+                              options={[
+                                { value: 'text', label: 'متن' },
+                                { value: 'number', label: 'عدد' },
+                                { value: 'date', label: 'تاریخ' },
+                                { value: 'select', label: 'انتخابی' },
+                                { value: 'checkbox', label: 'چک‌باکس' },
+                                { value: 'lookup', label: 'جستجو از فرم دیگر' },
+                                { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
+                              ]}
+                            />
+                          </Form.Item>
 
-                      <Button danger onClick={() => remove(field.name)}>
-                        حذف فیلد
-                      </Button>
-                    </Space>
+                          <Form.Item
+                            name={[field.name, 'required']}
+                            valuePropName="checked"
+                            label="ضروری"
+                          >
+                            <Checkbox />
+                          </Form.Item>
 
+                          <Form.Item
+                            noStyle
+                            shouldUpdate={(prev, cur) =>
+                              prev?.fields?.[field.name]?.type !==
+                              cur?.fields?.[field.name]?.type
+                            }
+                          >
+                            {() => {
+                              const type = form.getFieldValue(['fields', field.name, 'type']);
+                              if (type === 'select') {
+                                return (
+                                  <Form.Item
+                                    name={[field.name, 'optionsText']}
+                                    label="گزینه‌ها (با کاما جدا کنید)"
+                                  >
+                                    <Input
+                                      style={{ width: 280 }}
+                                      placeholder="مثلاً: گزینه۱, گزینه۲, گزینه۳"
+                                    />
+                                  </Form.Item>
+                                );
+                              }
+                              if (type === 'lookup' || type === 'exist') {
+                                return (
+                                  <>
+                                    <Form.Item
+                                      name={[field.name, 'lookupFormId']}
+                                      label="انتخاب فرم مبدا"
+                                      rules={[{ required: true }]}
+                                    >
+                                      <Select
+                                        style={{ width: 220 }}
+                                        options={forms.map((f) => ({ value: f.id, label: f.name }))}
+                                      />
+                                    </Form.Item>
+                                    <Form.Item
+                                      name={[field.name, 'lookupSourceField']}
+                                      label="فیلد کد/شناسه در فرم مبدا"
+                                      rules={[{ required: true }]}
+                                    >
+                                      <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
+                                    </Form.Item>
+                                  </>
+                                );
+                              }
+                              return null;
+                            }}
+                          </Form.Item>
 
-                  </Card>
-                ))}
+                          <Button danger onClick={() => remove(field.name)}>
+                            حذف فیلد
+                          </Button>
+                        </Space>
+                      </Card>
+                    );
+                  })}
 
-                <Button
-                  type="dashed"
-                  onClick={() => add({ type: 'text', required: false })}
-                  block
-                >
-                  افزودن فیلد
-                </Button>
-              </>
-            )}
+                  <Button
+                    type="dashed"
+                    onClick={() => add({ type: 'text', required: false })}
+                    block
+                  >
+                    افزودن فیلد
+                  </Button>
+                </>
+              );
+            }}
           </Form.List>
 
 
@@ -450,99 +495,144 @@ export default function Structure() {
                       فیلدهایی که در این بخش تعریف می‌کنید، به عنوان ستون‌های جدول برای ورودی‌های چندردیفه استفاده خواهند شد.
                     </Typography.Text>
                     <Form.List name="subFields">
-                      {(subFields, { add, remove }) => (
-                        <>
-                          {subFields.map((field) => (
-                            <Card key={field.key} size="small" className="mb-3 border-blue-200 shadow-sm">
-                              <Space align="start" wrap>
-                                <Form.Item
-                                  name={[field.name, 'label']}
-                                  label="نام ستون"
-                                  rules={[{ required: true, message: 'الزامی' }]}
-                                >
-                                  <Input style={{ width: 180 }} />
-                                </Form.Item>
-                                <Form.Item
-                                  name={[field.name, 'type']}
-                                  label="نوع داده"
-                                  rules={[{ required: true }]}
-                                >
-                                  <Select
-                                    style={{ width: 160 }}
-                                    options={[
-                                      { value: 'text', label: 'متن' },
-                                      { value: 'number', label: 'عدد' },
-                                      { value: 'date', label: 'تاریخ' },
-                                      { value: 'select', label: 'انتخابی' },
-                                      { value: 'checkbox', label: 'چک‌باکس' },
-                                      { value: 'lookup', label: 'جستجو از فرم دیگر' },
-                                      { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
-                                    ]}
-                                  />
-                                </Form.Item>
-                                <Form.Item
-                                  name={[field.name, 'required']}
-                                  valuePropName="checked"
-                                  label="ضروری"
-                                >
-                                  <Checkbox />
-                                </Form.Item>
-
-                                <Form.Item
-                                  noStyle
-                                  shouldUpdate={(prev, cur) =>
-                                    prev?.subFields?.[field.name]?.type !==
-                                    cur?.subFields?.[field.name]?.type
-                                  }
-                                >
-                                  {() => {
-                                    const type = form.getFieldValue(['subFields', field.name, 'type']);
-                                    if (type === 'select') {
-                                      return (
-                                        <Form.Item
-                                          name={[field.name, 'optionsText']}
-                                          label="گزینه‌ها"
-                                        >
-                                          <Input style={{ width: 280 }} placeholder="گزینه۱, گزینه۲" />
-                                        </Form.Item>
-                                      );
+                      {(subFields, { add, remove, move }) => {
+                        const listKey = 'subFields';
+                        return (
+                          <>
+                            {subFields.map((field) => {
+                              const isDragging = dragState?.listKey === listKey && dragState.index === field.name;
+                              const isDragOver = dragOverState?.listKey === listKey && dragOverState.index === field.name;
+                              return (
+                                <Card
+                                  key={field.key}
+                                  size="small"
+                                  className={`mb-3 border-blue-200 shadow-sm transition-all duration-200 ${isDragging ? 'opacity-60 scale-[0.98]' : ''} ${isDragOver ? 'shadow-md ring-2 ring-blue-300 -translate-y-0.5' : ''}`}
+                                  onDragOver={(e) => {
+                                    if (dragState?.listKey === listKey) {
+                                      e.preventDefault();
+                                      if (dragOverState?.listKey !== listKey || dragOverState.index !== field.name) {
+                                        setDragOverState({ listKey, index: field.name });
+                                      }
                                     }
-                                    if (type === 'lookup' || type === 'exist') {
-                                      return (
-                                        <>
-                                          <Form.Item
-                                            name={[field.name, 'lookupFormId']}
-                                            label="انتخاب فرم مبدا"
-                                            rules={[{ required: true }]}
-                                          >
-                                            <Select
-                                              style={{ width: 220 }}
-                                              options={forms.map((f) => ({ value: f.id, label: f.name }))}
-                                            />
-                                          </Form.Item>
-                                          <Form.Item
-                                            name={[field.name, 'lookupSourceField']}
-                                            label="فیلد کد/شناسه در فرم مبدا"
-                                            rules={[{ required: true }]}
-                                          >
-                                            <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
-                                          </Form.Item>
-                                        </>
-                                      );
-                                    }
-                                    return null;
                                   }}
-                                </Form.Item>
+                                  onDragLeave={() => {
+                                    if (dragOverState?.listKey === listKey && dragOverState.index === field.name) {
+                                      setDragOverState(null);
+                                    }
+                                  }}
+                                  onDrop={(e) => {
+                                    if (dragState?.listKey === listKey) {
+                                      e.preventDefault();
+                                      if (dragState.index !== field.name) {
+                                        move(dragState.index, field.name);
+                                      }
+                                    }
+                                    setDragState(null);
+                                    setDragOverState(null);
+                                  }}
+                                >
+                                  <Space align="start" wrap>
+                                    <span
+                                      draggable
+                                      onDragStart={() => setDragState({ listKey, index: field.name })}
+                                      onDragEnd={() => {
+                                        setDragState(null);
+                                        setDragOverState(null);
+                                      }}
+                                      style={{ cursor: 'grab', fontSize: 16, paddingTop: 6 }}
+                                    >
+                                      <DragOutlined />
+                                    </span>
+                                    <Form.Item
+                                      name={[field.name, 'label']}
+                                      label="نام ستون"
+                                      rules={[{ required: true, message: 'الزامی' }]}
+                                    >
+                                      <Input style={{ width: 180 }} />
+                                    </Form.Item>
+                                    <Form.Item
+                                      name={[field.name, 'type']}
+                                      label="نوع داده"
+                                      rules={[{ required: true }]}
+                                    >
+                                      <Select
+                                        style={{ width: 160 }}
+                                        options={[
+                                          { value: 'text', label: 'متن' },
+                                          { value: 'number', label: 'عدد' },
+                                          { value: 'date', label: 'تاریخ' },
+                                          { value: 'select', label: 'انتخابی' },
+                                          { value: 'checkbox', label: 'چک‌باکس' },
+                                          { value: 'lookup', label: 'جستجو از فرم دیگر' },
+                                          { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
+                                        ]}
+                                      />
+                                    </Form.Item>
+                                    <Form.Item
+                                      name={[field.name, 'required']}
+                                      valuePropName="checked"
+                                      label="ضروری"
+                                    >
+                                      <Checkbox />
+                                    </Form.Item>
 
-                                <Button danger onClick={() => remove(field.name)}>حذف ستون</Button>
-                              </Space>
-                            </Card>
-                          ))}
-                          <Button type="dashed" onClick={() => add({ type: 'text', required: false })} block className="border-blue-400 text-blue-600">
-                            + افزودن ستون زیرفیلد
-                          </Button>
-                        </>
-                      )}
+                                    <Form.Item
+                                      noStyle
+                                      shouldUpdate={(prev, cur) =>
+                                        prev?.subFields?.[field.name]?.type !==
+                                        cur?.subFields?.[field.name]?.type
+                                      }
+                                    >
+                                      {() => {
+                                        const type = form.getFieldValue(['subFields', field.name, 'type']);
+                                        if (type === 'select') {
+                                          return (
+                                            <Form.Item
+                                              name={[field.name, 'optionsText']}
+                                              label="گزینه‌ها"
+                                            >
+                                              <Input style={{ width: 280 }} placeholder="گزینه۱, گزینه۲" />
+                                            </Form.Item>
+                                          );
+                                        }
+                                        if (type === 'lookup' || type === 'exist') {
+                                          return (
+                                            <>
+                                              <Form.Item
+                                                name={[field.name, 'lookupFormId']}
+                                                label="انتخاب فرم مبدا"
+                                                rules={[{ required: true }]}
+                                              >
+                                                <Select
+                                                  style={{ width: 220 }}
+                                                  options={forms.map((f) => ({ value: f.id, label: f.name }))}
+                                                />
+                                              </Form.Item>
+                                              <Form.Item
+                                                name={[field.name, 'lookupSourceField']}
+                                                label="فیلد کد/شناسه در فرم مبدا"
+                                                rules={[{ required: true }]}
+                                              >
+                                                <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
+                                              </Form.Item>
+                                            </>
+                                          );
+                                        }
+                                        return null;
+                                      }}
+                                    </Form.Item>
+
+                                    <Button danger onClick={() => remove(field.name)}>حذف ستون</Button>
+                                  </Space>
+                                </Card>
+                              );
+                            })}
+                            <Button type="dashed" onClick={() => add({ type: 'text', required: false })} block className="border-blue-400 text-blue-600">
+                              + افزودن ستون زیرفیلد
+                            </Button>
+                          </>
+                        );
+                      }}
                     </Form.List>
                   </div>
                 );
@@ -568,113 +658,158 @@ export default function Structure() {
                               </Space>
 
                               <Form.List name={[cat.name, 'fields']}>
-                                {(fields, { add, remove }) => (
-                                  <>
-                                    {fields.map((field) => (
-                                      <Card key={field.key} size="small" className="mb-3">
-                                        <Space align="start" wrap>
-                                          <Form.Item
-                                            name={[field.name, 'label']}
-                                            label="برچسب فیلد"
-                                            rules={[
-                                              { required: true, message: 'برچسب الزامی است' },
-                                              {
-                                                validator: async (_: any, value: string) => {
-                                                  const list = (form.getFieldValue(['categories', cat.name, 'fields']) || []) as any[];
-                                                  const dupCount = list.filter((f, idx) => (f?.label === value) && idx !== field.name).length;
-                                                  if (value && dupCount > 0) {
-                                                    return Promise.reject(new Error('برچسب فیلد باید یکتا باشد'));
-                                                  }
-                                                  return Promise.resolve();
-                                                },
-                                              },
-                                            ]}
-                                          >
-                                            <Input style={{ width: 180 }} />
-                                          </Form.Item>
-
-                                          <Form.Item
-                                            name={[field.name, 'type']}
-                                            label="نوع داده"
-                                            rules={[{ required: true, message: 'نوع داده را انتخاب کنید' }]}
-                                          >
-                                            <Select
-                                              style={{ width: 160 }}
-                                              options={[
-                                                { value: 'text', label: 'متن' },
-                                                { value: 'number', label: 'عدد' },
-                                                { value: 'date', label: 'تاریخ' },
-                                                { value: 'select', label: 'انتخابی' },
-                                                { value: 'checkbox', label: 'چک‌باکس' },
-                                                { value: 'lookup', label: 'جستجو از فرم دیگر' },
-                                                { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
-                                              ]}
-                                            />
-                                          </Form.Item>
-
-                                          <Form.Item
-                                            name={[field.name, 'required']}
-                                            valuePropName="checked"
-                                            label="ضروری"
-                                          >
-                                            <Checkbox />
-                                          </Form.Item>
-
-                                          <Form.Item
-                                            noStyle
-                                            shouldUpdate={(prev, cur) =>
-                                              prev?.categories?.[cat.name]?.fields?.[field.name]?.type !==
-                                              cur?.categories?.[cat.name]?.fields?.[field.name]?.type
-                                            }
-                                          >
-                                            {() => {
-                                              const type = form.getFieldValue(['categories', cat.name, 'fields', field.name, 'type']);
-                                              if (type === 'select') {
-                                                return (
-                                                  <Form.Item
-                                                    name={[field.name, 'optionsText']}
-                                                    label="گزینه‌ها (با کاما جدا کنید)"
-                                                  >
-                                                    <Input style={{ width: 280 }} placeholder="مثلاً: گزینه۱, گزینه۲, گزینه۳" />
-                                                  </Form.Item>
-                                                );
+                                {(fields, { add, remove, move }) => {
+                                  const listKey = `categories.${cat.name}.fields`;
+                                  return (
+                                    <>
+                                      {fields.map((field) => {
+                                        const isDragging = dragState?.listKey === listKey && dragState.index === field.name;
+                                        const isDragOver = dragOverState?.listKey === listKey && dragOverState.index === field.name;
+                                        return (
+                                          <Card
+                                            key={field.key}
+                                            size="small"
+                                            className={`mb-3 transition-all duration-200 ${isDragging ? 'opacity-60 scale-[0.98]' : ''} ${isDragOver ? 'shadow-md ring-2 ring-blue-300 -translate-y-0.5' : ''}`}
+                                            onDragOver={(e) => {
+                                              if (dragState?.listKey === listKey) {
+                                                e.preventDefault();
+                                                if (dragOverState?.listKey !== listKey || dragOverState.index !== field.name) {
+                                                  setDragOverState({ listKey, index: field.name });
+                                                }
                                               }
-                                              if (type === 'lookup' || type === 'exist') {
-                                                return (
-                                                  <>
-                                                    <Form.Item
-                                                      name={[field.name, 'lookupFormId']}
-                                                      label="انتخاب فرم مبدا"
-                                                      rules={[{ required: true }]}
-                                                    >
-                                                      <Select
-                                                        style={{ width: 220 }}
-                                                        options={forms.map((f) => ({ value: f.id, label: f.name }))}
-                                                      />
-                                                    </Form.Item>
-                                                    <Form.Item
-                                                      name={[field.name, 'lookupSourceField']}
-                                                      label="فیلد کد/شناسه در فرم مبدا"
-                                                      rules={[{ required: true }]}
-                                                    >
-                                                      <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
-                                                    </Form.Item>
-                                                  </>
-                                                );
-                                              }
-                                              return null;
                                             }}
-                                          </Form.Item>
+                                            onDragLeave={() => {
+                                              if (dragOverState?.listKey === listKey && dragOverState.index === field.name) {
+                                                setDragOverState(null);
+                                              }
+                                            }}
+                                            onDrop={(e) => {
+                                              if (dragState?.listKey === listKey) {
+                                                e.preventDefault();
+                                                if (dragState.index !== field.name) {
+                                                  move(dragState.index, field.name);
+                                                }
+                                              }
+                                              setDragState(null);
+                                              setDragOverState(null);
+                                            }}
+                                          >
+                                            <Space align="start" wrap>
+                                              <span
+                                                draggable
+                                                onDragStart={() => setDragState({ listKey, index: field.name })}
+                                                onDragEnd={() => {
+                                                  setDragState(null);
+                                                  setDragOverState(null);
+                                                }}
+                                                style={{ cursor: 'grab', fontSize: 16, paddingTop: 6 }}
+                                              >
+                                                <DragOutlined />
+                                              </span>
+                                              <Form.Item
+                                                name={[field.name, 'label']}
+                                                label="برچسب فیلد"
+                                                rules={[
+                                                  { required: true, message: 'برچسب الزامی است' },
+                                                  {
+                                                    validator: async (_: any, value: string) => {
+                                                      const list = (form.getFieldValue(['categories', cat.name, 'fields']) || []) as any[];
+                                                      const dupCount = list.filter((f, idx) => (f?.label === value) && idx !== field.name).length;
+                                                      if (value && dupCount > 0) {
+                                                        return Promise.reject(new Error('برچسب فیلد باید یکتا باشد'));
+                                                      }
+                                                      return Promise.resolve();
+                                                    },
+                                                  },
+                                                ]}
+                                              >
+                                                <Input style={{ width: 180 }} />
+                                              </Form.Item>
 
-                                          <Button danger onClick={() => remove(field.name)}>حذف فیلد</Button>
-                                        </Space>
-                                      </Card>
-                                    ))}
-                                    <Button type="dashed" onClick={() => add({ type: 'text', required: false })} block>
-                                      افزودن فیلد در زیرشاخه
-                                    </Button>
-                                  </>
-                                )}
+                                              <Form.Item
+                                                name={[field.name, 'type']}
+                                                label="نوع داده"
+                                                rules={[{ required: true, message: 'نوع داده را انتخاب کنید' }]}
+                                              >
+                                                <Select
+                                                  style={{ width: 160 }}
+                                                  options={[
+                                                    { value: 'text', label: 'متن' },
+                                                    { value: 'number', label: 'عدد' },
+                                                    { value: 'date', label: 'تاریخ' },
+                                                    { value: 'select', label: 'انتخابی' },
+                                                    { value: 'checkbox', label: 'چک‌باکس' },
+                                                    { value: 'lookup', label: 'جستجو از فرم دیگر' },
+                                                    { value: 'exist', label: 'بررسی وجود در فرم دیگر' },
+                                                  ]}
+                                                />
+                                              </Form.Item>
+
+                                              <Form.Item
+                                                name={[field.name, 'required']}
+                                                valuePropName="checked"
+                                                label="ضروری"
+                                              >
+                                                <Checkbox />
+                                              </Form.Item>
+
+                                              <Form.Item
+                                                noStyle
+                                                shouldUpdate={(prev, cur) =>
+                                                  prev?.categories?.[cat.name]?.fields?.[field.name]?.type !==
+                                                  cur?.categories?.[cat.name]?.fields?.[field.name]?.type
+                                                }
+                                              >
+                                                {() => {
+                                                  const type = form.getFieldValue(['categories', cat.name, 'fields', field.name, 'type']);
+                                                  if (type === 'select') {
+                                                    return (
+                                                      <Form.Item
+                                                        name={[field.name, 'optionsText']}
+                                                        label="گزینه‌ها (با کاما جدا کنید)"
+                                                      >
+                                                        <Input style={{ width: 280 }} placeholder="مثلاً: گزینه۱, گزینه۲, گزینه۳" />
+                                                      </Form.Item>
+                                                    );
+                                                  }
+                                                  if (type === 'lookup' || type === 'exist') {
+                                                    return (
+                                                      <>
+                                                        <Form.Item
+                                                          name={[field.name, 'lookupFormId']}
+                                                          label="انتخاب فرم مبدا"
+                                                          rules={[{ required: true }]}
+                                                        >
+                                                          <Select
+                                                            style={{ width: 220 }}
+                                                            options={forms.map((f) => ({ value: f.id, label: f.name }))}
+                                                          />
+                                                        </Form.Item>
+                                                        <Form.Item
+                                                          name={[field.name, 'lookupSourceField']}
+                                                          label="فیلد کد/شناسه در فرم مبدا"
+                                                          rules={[{ required: true }]}
+                                                        >
+                                                          <Input style={{ width: 200 }} placeholder="مثلاً: کد ملی" />
+                                                        </Form.Item>
+                                                      </>
+                                                    );
+                                                  }
+                                                  return null;
+                                                }}
+                                              </Form.Item>
+
+                                              <Button danger onClick={() => remove(field.name)}>حذف فیلد</Button>
+                                            </Space>
+                                          </Card>
+                                        );
+                                      })}
+                                      <Button type="dashed" onClick={() => add({ type: 'text', required: false })} block>
+                                        افزودن فیلد در زیرشاخه
+                                      </Button>
+                                    </>
+                                  );
+                                }}
                               </Form.List>
                             </Space>
                           </Card>

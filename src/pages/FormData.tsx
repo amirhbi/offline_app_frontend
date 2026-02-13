@@ -81,7 +81,10 @@ export default function FormData() {
   }>({ type: "all" });
   // Export mode state
   const [exportView, setExportView] = useState(false);
-  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [selectedRowIdsByTable, setSelectedRowIdsByTable] = useState<{
+    base: string[];
+    categories: Record<string, string[]>;
+  }>({ base: [], categories: {} });
   const [includeColors, setIncludeColors] = useState(true);
   const [randomOrder, setRandomOrder] = useState(false);
   const [pdfLandscape, setPdfLandscape] = useState(false);
@@ -115,6 +118,14 @@ export default function FormData() {
   const [viewItems, setViewItems] = useState<{ label: string; value: any }[]>([]);
   const [viewSubRows, setViewSubRows] = useState<Record<string, any>[]>([]);
   const [viewTitle, setViewTitle] = useState<string>("");
+
+  const selectedRowIdsAll = useMemo(() => {
+    const set = new Set<string>(selectedRowIdsByTable.base);
+    for (const ids of Object.values(selectedRowIdsByTable.categories)) {
+      ids.forEach((id) => set.add(id));
+    }
+    return Array.from(set);
+  }, [selectedRowIdsByTable]);
 
   // Default: select all columns when options become available
   useEffect(() => {
@@ -1527,8 +1538,8 @@ export default function FormData() {
 
   const downloadXlsx = async () => {
     if (!formDef) return;
-    const targetEntries = selectedRowIds.length
-      ? entries.filter((e) => selectedRowIds.includes(e.id))
+    const targetEntries = selectedRowIdsAll.length
+      ? entries.filter((e) => selectedRowIdsAll.includes(e.id))
       : selectAll
         ? entries.slice()
         : [];
@@ -1737,8 +1748,8 @@ export default function FormData() {
 
   const downloadPdf = async () => {
     if (!formDef) return;
-    const targetEntries = selectedRowIds.length
-      ? entries.filter((e) => selectedRowIds.includes(e.id))
+    const targetEntries = selectedRowIdsAll.length
+      ? entries.filter((e) => selectedRowIdsAll.includes(e.id))
       : selectAll
         ? entries.slice()
         : [];
@@ -2173,8 +2184,8 @@ export default function FormData() {
 
   const downloadHtml = async () => {
     if (!formDef) return;
-    const targetEntries = selectedRowIds.length
-      ? entries.filter((e) => selectedRowIds.includes(e.id))
+    const targetEntries = selectedRowIdsAll.length
+      ? entries.filter((e) => selectedRowIdsAll.includes(e.id))
       : selectAll
         ? entries.slice()
         : [];
@@ -2499,7 +2510,7 @@ export default function FormData() {
         method: 'POST',
         body: {
           action: 'export_html',
-          detail: `خروجی HTML | فرم ${formDef.name} | رکوردها: ${selectedRowIds.length ? selectedRowIds.length : selectAll ? entries.length : 0} | خروجی تصادفی: ${randomOrder ? 'بله' : 'خیر'} | خروجی با رنگ‌ها: ${includeColors ? 'بله' : 'خیر'}`,
+          detail: `خروجی HTML | فرم ${formDef.name} | رکوردها: ${selectedRowIdsAll.length ? selectedRowIdsAll.length : selectAll ? entries.length : 0} | خروجی تصادفی: ${randomOrder ? 'بله' : 'خیر'} | خروجی با رنگ‌ها: ${includeColors ? 'بله' : 'خیر'}`,
         },
       });
     } catch {}
@@ -2623,7 +2634,12 @@ export default function FormData() {
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setSelectAll(checked);
-                  setSelectedRowIds(checked ? entries.map((r) => r.id) : []);
+                  const allIds = checked ? entries.map((r) => r.id) : [];
+                  const categories: Record<string, string[]> = {};
+                  for (const c of formDef?.categories || []) {
+                    categories[c.name] = allIds;
+                  }
+                  setSelectedRowIdsByTable({ base: allIds, categories });
                 }}
               >
                 انتخاب همه سطر ها
@@ -2658,7 +2674,7 @@ export default function FormData() {
               <Button
                 onClick={() => {
                   setExportView(false);
-                  setSelectedRowIds([]);
+                  setSelectedRowIdsByTable({ base: [], categories: {} });
                   setSelectAll(false);
                 }}
               >
@@ -2791,8 +2807,12 @@ export default function FormData() {
                           rowSelection={
                             exportView
                               ? {
-                                  selectedRowKeys: selectedRowIds,
-                                  onChange: (keys) => setSelectedRowIds(keys as string[]),
+                                  selectedRowKeys: selectedRowIdsByTable.base,
+                                  onChange: (keys) =>
+                                    setSelectedRowIdsByTable((prev) => ({
+                                      ...prev,
+                                      base: keys as string[],
+                                    })),
                                 }
                               : undefined
                           }
@@ -2866,8 +2886,16 @@ export default function FormData() {
                           rowSelection={
                             exportView
                               ? {
-                                  selectedRowKeys: selectedRowIds,
-                                  onChange: (keys) => setSelectedRowIds(keys as string[]),
+                                  selectedRowKeys:
+                                    selectedRowIdsByTable.categories[cat.name] || [],
+                                  onChange: (keys) =>
+                                    setSelectedRowIdsByTable((prev) => ({
+                                      ...prev,
+                                      categories: {
+                                        ...prev.categories,
+                                        [cat.name]: keys as string[],
+                                      },
+                                    })),
                                 }
                               : undefined
                           }
@@ -3171,8 +3199,12 @@ export default function FormData() {
             rowSelection={
               exportView
                 ? {
-                  selectedRowKeys: selectedRowIds,
-                  onChange: (keys) => setSelectedRowIds(keys as string[]),
+                  selectedRowKeys: selectedRowIdsByTable.base,
+                  onChange: (keys) =>
+                    setSelectedRowIdsByTable((prev) => ({
+                      ...prev,
+                      base: keys as string[],
+                    })),
                 }
                 : undefined
             }
@@ -3248,8 +3280,16 @@ export default function FormData() {
             rowSelection={
               exportView
                 ? {
-                  selectedRowKeys: selectedRowIds,
-                  onChange: (keys) => setSelectedRowIds(keys as string[]),
+                  selectedRowKeys:
+                    selectedRowIdsByTable.categories[cat.name] || [],
+                  onChange: (keys) =>
+                    setSelectedRowIdsByTable((prev) => ({
+                      ...prev,
+                      categories: {
+                        ...prev.categories,
+                        [cat.name]: keys as string[],
+                      },
+                    })),
                 }
                 : undefined
             }
