@@ -1,6 +1,6 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
-const BASE = '/api';
+export const API_BASE = 'https://off.liara.run/api';
 
 function getAuthToken(): string | null {
   try {
@@ -15,7 +15,7 @@ export async function request<T>(path: string, opts: { method?: HttpMethod; body
   const token = getAuthToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: opts.method || 'GET',
     headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,

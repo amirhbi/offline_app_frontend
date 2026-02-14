@@ -24,7 +24,7 @@ import {
 } from "@ant-design/icons";
 import { listUsers, updateUser, UserRecord } from "../api/users";
 import { useAuth } from "../auth/AuthContext";
-import { request } from "../api/client";
+import { API_BASE, request } from "../api/client";
 
 export default function Backup() {
   const [form] = Form.useForm();
@@ -168,7 +168,7 @@ export default function Backup() {
   const handleDownload = async (rec: BackupRow) => {
     try {
       const token = localStorage.getItem('app_token');
-      const res = await fetch(`/api/backups/${rec.id}/download`, {
+      const res = await fetch(`${API_BASE}/backups/${rec.id}/download`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       if (!res.ok) {
@@ -222,7 +222,7 @@ export default function Backup() {
         const fd = new FormData();
         fd.append("file", file);
         const token = localStorage.getItem("app_token");
-        const res = await fetch("/api/backups/restore/file", {
+        const res = await fetch(`${API_BASE}/backups/restore/file`, {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           body: fd,
