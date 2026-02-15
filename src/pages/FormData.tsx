@@ -2491,7 +2491,7 @@ export default function FormData() {
         table { border-collapse: collapse; width: 100%; margin-bottom: 20px; background: #fff; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
         th { background-color: #f4f4f4; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .container { width: max-content; margin: 0 auto; background: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         h1 { text-align: center; }
         @media print {
             body { background: none; padding: 0; }
