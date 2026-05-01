@@ -62,6 +62,7 @@ export default function Structure() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingForm, setEditingForm] = useState<FormDefinition | null>(null);
   const [form] = Form.useForm();
+  const [saveLoading, setSaveLoading] = useState(false);
   const [dragState, setDragState] = useState<{ listKey: string; index: number } | null>(null);
   const [dragOverState, setDragOverState] = useState<{ listKey: string; index: number } | null>(null);
 
@@ -141,6 +142,7 @@ export default function Structure() {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+      setSaveLoading(true);
       const normalizeField = (f: any) => ({
         label: f.label,
         type: f.type,
@@ -188,6 +190,8 @@ export default function Structure() {
       setEditingForm(null);
     } catch (e) {
       // validation errors are handled by antd
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -275,6 +279,7 @@ export default function Structure() {
           setEditingForm(null);
         }}
         onOk={handleSave}
+        confirmLoading={saveLoading}
         okText="ذخیره"
         cancelText="انصراف"
         width={800}

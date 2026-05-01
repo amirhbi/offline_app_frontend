@@ -9,10 +9,13 @@ export default function Login() {
   const location = useLocation();
   const { signIn, userData, role } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const from = (location.state as any)?.from?.pathname || '/dashboard';
 
   const onFinish = async (values: { username: string; password: string }) => {
+    setLoading(true);
     const res = await signIn(values.username, values.password);
+    setLoading(false);
     if (res.ok) {
       const userRole = res.role ?? userData?.role;
       if (userRole === 'l2') {
@@ -45,7 +48,7 @@ export default function Login() {
             <Input.Password placeholder="••••••••" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" block>
+            <Button type="primary" htmlType="submit" block loading={loading} disabled={loading}>
               ورود
             </Button>
           </Form.Item>

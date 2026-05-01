@@ -13,6 +13,8 @@ export default function Users() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
   const [createForm] = Form.useForm<UserRow>();
   const [editForm] = Form.useForm<UserRow>();
 
@@ -105,6 +107,7 @@ export default function Users() {
   const handleCreate = async () => {
     try {
       const values = await createForm.validateFields();
+      setCreateLoading(true);
       const payload = {
         username: values.username,
         nickname: values.nickname || '',
@@ -122,6 +125,8 @@ export default function Users() {
       message.success('کاربر جدید ایجاد شد');
     } catch (err: any) {
       message.error(err?.message || 'ایجاد کاربر ناموفق بود');
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -155,6 +160,7 @@ export default function Users() {
     try {
       const values = await editForm.validateFields();
       if (!editingUser) return;
+      setEditLoading(true);
       const updated = await updateUser(editingUser.id, {
         username: values.username,
         nickname: values.nickname || '',
@@ -170,6 +176,8 @@ export default function Users() {
       message.success('ویرایش کاربر انجام شد');
     } catch (err: any) {
       message.error(err?.message || 'ویرایش کاربر ناموفق بود');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -288,6 +296,7 @@ export default function Users() {
         cancelText="انصراف"
         onCancel={() => setCreateOpen(false)}
         onOk={handleCreate}
+        confirmLoading={createLoading}
       >
         <Form
           form={createForm}
@@ -331,6 +340,7 @@ export default function Users() {
         cancelText="انصراف"
         onCancel={() => { setEditOpen(false); setEditingUser(null); }}
         onOk={handleEdit}
+        confirmLoading={editLoading}
       >
         <Form
           form={editForm}

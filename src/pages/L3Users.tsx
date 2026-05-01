@@ -14,6 +14,8 @@ export default function L3Users() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<L3UserRow | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
   const [createForm] = Form.useForm<L3UserRow>();
   const [editForm] = Form.useForm<L3UserRow>();
 
@@ -102,6 +104,7 @@ export default function L3Users() {
   const handleCreate = async () => {
     try {
       const values = await createForm.validateFields();
+      setCreateLoading(true);
       const payload = {
         username: values.username,
         nickname: values.nickname || '',
@@ -119,6 +122,8 @@ export default function L3Users() {
       message.success('کاربر سطح ۳ جدید ایجاد شد');
     } catch (err: any) {
       message.error(err?.message || 'ایجاد کاربر سطح ۳ ناموفق بود');
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -151,6 +156,7 @@ export default function L3Users() {
     try {
       const values = await editForm.validateFields();
       if (!editingUser) return;
+      setEditLoading(true);
       const updated = await updateUser(editingUser.id, {
         username: values.username,
         nickname: values.nickname || '',
@@ -165,6 +171,8 @@ export default function L3Users() {
       message.success('ویرایش کاربر سطح ۳ انجام شد');
     } catch (err: any) {
       message.error(err?.message || 'ویرایش کاربر سطح ۳ ناموفق بود');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -261,6 +269,7 @@ export default function L3Users() {
         cancelText="انصراف"
         onCancel={() => setCreateOpen(false)}
         onOk={handleCreate}
+        confirmLoading={createLoading}
       >
         <Form
           form={createForm}
@@ -301,6 +310,7 @@ export default function L3Users() {
         cancelText="انصراف"
         onCancel={() => { setEditOpen(false); setEditingUser(null); }}
         onOk={handleEdit}
+        confirmLoading={editLoading}
       >
         <Form
           form={editForm}
