@@ -2814,7 +2814,7 @@ export default function FormData() {
                           dataSource={visibleBaseEntries}
                           columns={baseColumns as any}
                           loading={loading}
-                          pagination={{ pageSize: 12 }}
+                          pagination={{ defaultPageSize: 12, showSizeChanger: true }}
                           scroll={{ x: "max-content" }}
                           rowSelection={
                             exportView
@@ -2893,7 +2893,7 @@ export default function FormData() {
                           dataSource={cat.rows}
                           columns={cat.columns as any}
                           loading={loading}
-                          pagination={{ pageSize: 12 }}
+                          pagination={{ defaultPageSize: 12, showSizeChanger: true }}
                           scroll={{ x: "max-content" }}
                           rowSelection={
                             exportView
@@ -3206,7 +3206,7 @@ export default function FormData() {
             dataSource={visibleBaseEntries}
             columns={baseColumns as any}
             loading={loading}
-            pagination={{ pageSize: 12 }}
+            pagination={{ defaultPageSize: 12, showSizeChanger: true }}
             scroll={{ x: "max-content" }}
             rowSelection={
               exportView
@@ -3287,7 +3287,7 @@ export default function FormData() {
             dataSource={cat.rows}
             columns={cat.columns as any}
             loading={loading}
-            pagination={{ pageSize: 12 }}
+            pagination={{ defaultPageSize: 12, showSizeChanger: true }}
             scroll={{ x: "max-content" }}
             rowSelection={
               exportView
