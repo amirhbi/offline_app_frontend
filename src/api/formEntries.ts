@@ -33,3 +33,7 @@ export async function updateFormEntry(formId: string, entryId: string, payload: 
 export async function deleteFormEntry(formId: string, entryId: string): Promise<void> {
   await request<void>(`/forms/${formId}/entries/${entryId}`, { method: 'DELETE' });
 }
+
+export async function reorderFormEntries(formId: string, ids: string[]): Promise<void> {
+  await request<void>(`/forms/${formId}/entries/reorder`, { method: 'PATCH', body: { ids } });
+}

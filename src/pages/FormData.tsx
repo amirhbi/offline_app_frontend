@@ -566,7 +566,7 @@ export default function FormData() {
         }
         const colorKey = `${cat.name} - __color`;
         initial[colorKey] = row?.data?.[colorKey] ?? undefined;
-        initial["__order"] = row?.data?.["__order"] ?? undefined;
+        initial["__order"] = row?.order ?? undefined;
       }
       setInlineValues(initial);
       setSubFieldsData([]);
@@ -585,7 +585,7 @@ export default function FormData() {
         else initial[f.label] = v ?? "";
       }
       initial["__color"] = row?.data?.["__color"] ?? undefined;
-      initial["__order"] = row?.data?.["__order"] ?? undefined;
+      initial["__order"] = row?.order ?? undefined;
       setInlineValues(initial);
       setSubFieldsData((row?.data?.subFieldsData || []) as Record<string, any>[]);
       setEditingEntryId(null);
@@ -631,7 +631,7 @@ export default function FormData() {
     }
     // Extra color field
     initial["__color"] = row?.data?.["__color"] ?? undefined;
-    initial["__order"] = row?.data?.["__order"] ?? undefined;
+    initial["__order"] = row?.order ?? undefined;
     setInlineValues(initial);
     // Load subFieldsData if exists
     setSubFieldsData((row?.data?.subFieldsData || []) as Record<string, any>[]);
@@ -1195,11 +1195,7 @@ export default function FormData() {
           })
         )
         .slice()
-        .sort((a, b) => {
-          const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return ad - bd; // oldest first, newest last
-        });
+        .sort(sortByOrderThenDate);
       const rowsFiltered = rows.filter((e) => matchesColorFilter(e, c.name));
       const finalRows = searchText.trim()
         ? rowsFiltered.filter((e) =>
@@ -1412,13 +1408,20 @@ export default function FormData() {
   }, [formDef, inlineValues, subFieldsData, editingEntryId]);
 
   // Filter entries shown in the base table to only those having meaningful values in base fields
+  const sortByOrderThenDate = (a: FormEntryRecord, b: FormEntryRecord) => {
+    const aHas = a.order != null;
+    const bHas = b.order != null;
+    if (aHas && bHas) return a.order! - b.order!;
+    if (aHas) return -1;
+    if (bHas) return 1;
+    const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return ad - bd;
+  };
+
   const filteredBaseEntries = useMemo(() => {
     if (!formDef)
-      return entries.slice().sort((a, b) => {
-        const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return ad - bd;
-      });
+      return entries.slice().sort(sortByOrderThenDate);
     const keys = (formDef.fields || []).map((f) => f.label);
     if (!keys.length) return [];
     return entries
@@ -1431,11 +1434,7 @@ export default function FormData() {
         })
       )
       .slice()
-      .sort((a, b) => {
-        const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return ad - bd; // oldest first, newest last
-      });
+      .sort(sortByOrderThenDate);
   }, [entries, formDef, fieldMeta]);
 
   const visibleBaseEntries = useMemo(() => {
