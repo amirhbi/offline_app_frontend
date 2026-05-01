@@ -81,6 +81,7 @@ export default function FormData() {
   }>({ type: "all" });
   // Export mode state
   const [exportView, setExportView] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState<'xlsx' | 'pdf' | 'html' | null>(null);
   const [selectedRowIdsByTable, setSelectedRowIdsByTable] = useState<{
     base: string[];
     categories: Record<string, string[]>;
@@ -1547,12 +1548,16 @@ export default function FormData() {
 
   const downloadXlsx = async () => {
     if (!formDef) return;
+    setDownloadLoading('xlsx');
+    const hide = message.loading('در حال تولید فایل XLSX...', 0);
     const targetEntries = selectedRowIdsAll.length
       ? entries.filter((e) => selectedRowIdsAll.includes(e.id))
       : selectAll
         ? entries.slice()
         : [];
     if (!targetEntries.length) {
+      hide();
+      setDownloadLoading(null);
       message.warning("هیچ رکوردی برای خروجی انتخاب نشده است");
       return;
     }
@@ -1753,10 +1758,14 @@ export default function FormData() {
         },
       });
     } catch {}
+    hide();
+    setDownloadLoading(null);
   };
 
   const downloadPdf = async () => {
     if (!formDef) return;
+    setDownloadLoading('pdf');
+    const hide = message.loading('در حال تولید فایل PDF...', 0);
     const targetEntries = selectedRowIdsAll.length
       ? entries.filter((e) => selectedRowIdsAll.includes(e.id))
       : selectAll
@@ -1764,6 +1773,8 @@ export default function FormData() {
         : [];
 
     if (!targetEntries.length) {
+      hide();
+      setDownloadLoading(null);
       message.warning("هیچ رکوردی برای خروجی انتخاب نشده است");
       return;
     }
@@ -2188,11 +2199,15 @@ export default function FormData() {
       message.error("خطا در تولید PDF");
     } finally {
       document.body.removeChild(container);
+      hide();
+      setDownloadLoading(null);
     }
   };
 
   const downloadHtml = async () => {
     if (!formDef) return;
+    setDownloadLoading('html');
+    const hide = message.loading('در حال تولید فایل HTML...', 0);
     const targetEntries = selectedRowIdsAll.length
       ? entries.filter((e) => selectedRowIdsAll.includes(e.id))
       : selectAll
@@ -2200,6 +2215,8 @@ export default function FormData() {
         : [];
 
     if (!targetEntries.length) {
+      hide();
+      setDownloadLoading(null);
       message.warning("هیچ رکوردی برای خروجی انتخاب نشده است");
       return;
     }
@@ -2526,6 +2543,8 @@ export default function FormData() {
         },
       });
     } catch {}
+    hide();
+    setDownloadLoading(null);
   };
 
 
@@ -2678,11 +2697,11 @@ export default function FormData() {
 
 
             <div className="flex gap-2">
-              <Button type="primary" onClick={downloadXlsx}>
+              <Button type="primary" onClick={downloadXlsx} loading={downloadLoading === 'xlsx'} disabled={!!downloadLoading}>
                 دانلود XLSX
               </Button>
-              <Button onClick={downloadPdf}>دانلود PDF</Button>
-              <Button onClick={downloadHtml}>دانلود HTML</Button>
+              <Button onClick={downloadPdf} loading={downloadLoading === 'pdf'} disabled={!!downloadLoading}>دانلود PDF</Button>
+              <Button onClick={downloadHtml} loading={downloadLoading === 'html'} disabled={!!downloadLoading}>دانلود HTML</Button>
               <Button
                 onClick={() => {
                   setExportView(false);
