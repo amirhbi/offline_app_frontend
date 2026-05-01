@@ -264,7 +264,7 @@ export default function Structure() {
         rowKey="id"
         dataSource={forms}
         columns={columns as any}
-        pagination={{ pageSize: 8 }}
+        pagination={{ defaultPageSize: 8, showSizeChanger: true }}
       />
 
       <Modal

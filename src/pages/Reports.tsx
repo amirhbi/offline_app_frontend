@@ -186,7 +186,7 @@ export default function Reports() {
             key: 'grid',
             label: 'جدول داده‌ها',
             children: (
-              <Table columns={columns} dataSource={filtered} pagination={{ pageSize: 8 }} />
+              <Table columns={columns} dataSource={filtered} pagination={{ defaultPageSize: 8, showSizeChanger: true }} />
             ),
           }
         ]}

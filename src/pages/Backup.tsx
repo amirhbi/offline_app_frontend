@@ -340,7 +340,7 @@ export default function Backup() {
                     dataSource={backups}
                     columns={columns as any}
                     loading={loading}
-                    pagination={{ pageSize: 8 }}
+                    pagination={{ defaultPageSize: 8, showSizeChanger: true }}
                   />
                 </div>
               </div>

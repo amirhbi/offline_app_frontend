@@ -108,7 +108,7 @@ export default function Logs() {
       <Table<LogRow>
         dataSource={filtered}
         rowKey="id"
-        pagination={{ pageSize: 10 }}
+        pagination={{ defaultPageSize: 10, showSizeChanger: true }}
         loading={loading}
         className="mb-4"
         columns={[
