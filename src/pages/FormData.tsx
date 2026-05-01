@@ -2240,6 +2240,7 @@ export default function FormData() {
       desc.style.fontSize = "13px";
       desc.style.lineHeight = "1.6";
       desc.style.textAlign = "right";
+      desc.style.whiteSpace = "pre-wrap";
       container.appendChild(desc);
     }
 
@@ -2320,6 +2321,7 @@ export default function FormData() {
         tdIndex.style.border = "1px solid #ddd";
         tdIndex.style.padding = "6px 8px";
         tdIndex.style.width = "50px";
+        tdIndex.style.whiteSpace = "pre-wrap";
         tdIndex.style.textAlign = "center";
         tdIndex.style.verticalAlign = "middle";
         tr.appendChild(tdIndex);
@@ -2339,6 +2341,7 @@ export default function FormData() {
           td.textContent = display === null || display === undefined ? "" : String(display);
           td.style.border = "1px solid #ddd";
           td.style.padding = "6px 8px";
+          td.style.whiteSpace = "pre-wrap";
           td.style.textAlign = "right";
           td.style.verticalAlign = "middle";
           tr.appendChild(td);
