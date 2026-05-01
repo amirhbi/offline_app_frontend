@@ -12,6 +12,7 @@ import {
   Button,
   message,
   Input,
+  InputNumber,
   Select,
   Checkbox,
   Modal,
@@ -565,6 +566,7 @@ export default function FormData() {
         }
         const colorKey = `${cat.name} - __color`;
         initial[colorKey] = row?.data?.[colorKey] ?? undefined;
+        initial["__order"] = row?.data?.["__order"] ?? undefined;
       }
       setInlineValues(initial);
       setSubFieldsData([]);
@@ -583,6 +585,7 @@ export default function FormData() {
         else initial[f.label] = v ?? "";
       }
       initial["__color"] = row?.data?.["__color"] ?? undefined;
+      initial["__order"] = row?.data?.["__order"] ?? undefined;
       setInlineValues(initial);
       setSubFieldsData((row?.data?.subFieldsData || []) as Record<string, any>[]);
       setEditingEntryId(null);
@@ -628,6 +631,7 @@ export default function FormData() {
     }
     // Extra color field
     initial["__color"] = row?.data?.["__color"] ?? undefined;
+    initial["__order"] = row?.data?.["__order"] ?? undefined;
     setInlineValues(initial);
     // Load subFieldsData if exists
     setSubFieldsData((row?.data?.subFieldsData || []) as Record<string, any>[]);
@@ -847,11 +851,15 @@ export default function FormData() {
           return newRow;
         });
       }
+      const orderVal = inlineValues["__order"];
+      const orderNum = (orderVal !== undefined && orderVal !== null) ? Number(orderVal) : NaN;
+      const order = !isNaN(orderNum) ? orderNum : undefined;
+      delete data["__order"];
       if (editingEntryId) {
-        await updateFormEntry(formId, editingEntryId, { data });
+        await updateFormEntry(formId, editingEntryId, { data, order });
         message.success("ویرایش رکورد انجام شد");
       } else {
-        await createFormEntry(formId, { data });
+        await createFormEntry(formId, { data, order });
         message.success("رکورد جدید ثبت شد");
       }
       setInlineAdd(false);
@@ -1230,6 +1238,23 @@ export default function FormData() {
       });
     }
 
+    // Order field
+    cols.push({
+      title: "ترتیب",
+      dataIndex: ["data", "__order"],
+      key: "__order",
+      render: (_val: any, row: any) =>
+        row.id === "__new__" ? (
+          <InputNumber
+            style={{ width: 80 }}
+            value={inlineValues["__order"] ?? undefined}
+            onChange={(v: number | null) => setInlineValues((p) => ({ ...p, __order: v }))}
+          />
+        ) : (
+          _val
+        ),
+    });
+
     // Extra color field (last item before actions)
     cols.push({
       title: "رنگ",
@@ -1305,6 +1330,23 @@ export default function FormData() {
             row.id === "__new__" ? renderInlineCell(key) : _val,
         });
       }
+
+      // Order column (inline add)
+      cols.push({
+        title: "ترتیب",
+        dataIndex: ["data", "__order"],
+        key: "__order",
+        render: (_val: any, row: any) =>
+          row.id === "__new__" ? (
+            <InputNumber
+              style={{ width: 80 }}
+              value={inlineValues["__order"] ?? undefined}
+              onChange={(v: number | null) => setInlineValues((p) => ({ ...p, __order: v }))}
+            />
+          ) : (
+            _val
+          ),
+      });
 
       // Category color column (inline add)
       {

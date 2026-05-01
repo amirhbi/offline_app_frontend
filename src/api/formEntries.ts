@@ -3,6 +3,7 @@ import { request } from './client';
 export type FormEntryRecord = {
   id: string;
   formId: string;
+  order?: number;
   data: Record<string, any>;
   createdAt?: string;
 };
@@ -19,12 +20,12 @@ export async function listFormEntries(formId: string): Promise<FormEntryRecord[]
   return data.map(mapEntry);
 }
 
-export async function createFormEntry(formId: string, payload: { data: Record<string, any> }): Promise<FormEntryRecord> {
+export async function createFormEntry(formId: string, payload: { data: Record<string, any>; order?: number }): Promise<FormEntryRecord> {
   const data = await request<ServerEntry>(`/forms/${formId}/entries`, { method: 'POST', body: payload });
   return mapEntry(data);
 }
 
-export async function updateFormEntry(formId: string, entryId: string, payload: { data: Record<string, any> }): Promise<FormEntryRecord> {
+export async function updateFormEntry(formId: string, entryId: string, payload: { data: Record<string, any>; order?: number }): Promise<FormEntryRecord> {
   const data = await request<ServerEntry>(`/forms/${formId}/entries/${entryId}`, { method: 'PUT', body: payload });
   return mapEntry(data);
 }
