@@ -2642,6 +2642,7 @@ export default function FormData() {
             { title: "فیلد", dataIndex: "label", key: "label", width: 200 },
             { title: "مقدار", dataIndex: "value", key: "value" },
           ] as any}
+          loading={loading}
           pagination={false}
           size="small"
           bordered
@@ -2654,6 +2655,7 @@ export default function FormData() {
             <Table
               rowKey={(_, idx) => `sub-${idx}`}
               dataSource={viewSubRows}
+              loading={loading}
               columns={(formDef?.subFields || []).map((sf) => ({
                 title: sf.label,
                 dataIndex: sf.label,

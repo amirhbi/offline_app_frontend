@@ -36,8 +36,10 @@ export default function Reports() {
 
   const [filtered, setFiltered] = useState<ReportRow[]>(sampleData);
   const [filterForm] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
   const applyFilter = (values: any) => {
+    setLoading(true);
     let result = [...sampleData];
     // فرم
     if (values.form && values.form !== 'all') {
@@ -67,6 +69,7 @@ export default function Reports() {
       }
     }
     setFiltered(result);
+    setLoading(false);
     message.success('فیلتر اعمال شد');
   };
 
@@ -186,7 +189,7 @@ export default function Reports() {
             key: 'grid',
             label: 'جدول داده‌ها',
             children: (
-              <Table columns={columns} dataSource={filtered} pagination={{ defaultPageSize: 8, showSizeChanger: true }} />
+              <Table columns={columns} dataSource={filtered} loading={loading} pagination={{ defaultPageSize: 8, showSizeChanger: true }} />
             ),
           }
         ]}

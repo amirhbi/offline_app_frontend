@@ -63,10 +63,12 @@ export default function Structure() {
   const [editingForm, setEditingForm] = useState<FormDefinition | null>(null);
   const [form] = Form.useForm();
   const [saveLoading, setSaveLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [dragState, setDragState] = useState<{ listKey: string; index: number } | null>(null);
   const [dragOverState, setDragOverState] = useState<{ listKey: string; index: number } | null>(null);
 
   const fetchForms = async () => {
+    setLoading(true);
     const data = await listForms();
     const mapped: FormDefinition[] = (data || []).map((f: any) => ({
       id: f._id ?? f.id,
@@ -86,6 +88,7 @@ export default function Structure() {
       return a.name.localeCompare(b.name, 'fa');
     });
     setForms(mapped);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -268,6 +271,7 @@ export default function Structure() {
         rowKey="id"
         dataSource={forms}
         columns={columns as any}
+        loading={loading}
         pagination={{ defaultPageSize: 8, showSizeChanger: true }}
       />
 
