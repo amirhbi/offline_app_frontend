@@ -1111,6 +1111,17 @@ export default function FormData() {
     return true;
   }
 
+  const sortByOrderThenDate = (a: FormEntryRecord, b: FormEntryRecord) => {
+    const aHas = a.order != null;
+    const bHas = b.order != null;
+    if (aHas && bHas) return a.order! - b.order!;
+    if (aHas) return -1;
+    if (bHas) return 1;
+    const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return ad - bd;
+  };
+
   const categoryTables = useMemo(() => {
     const tables: { name: string; columns: any[]; rows: FormEntryRecord[] }[] =
       [];
@@ -1406,18 +1417,6 @@ export default function FormData() {
     }
     return tables;
   }, [formDef, inlineValues, subFieldsData, editingEntryId]);
-
-  // Filter entries shown in the base table to only those having meaningful values in base fields
-  const sortByOrderThenDate = (a: FormEntryRecord, b: FormEntryRecord) => {
-    const aHas = a.order != null;
-    const bHas = b.order != null;
-    if (aHas && bHas) return a.order! - b.order!;
-    if (aHas) return -1;
-    if (bHas) return 1;
-    const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return ad - bd;
-  };
 
   const filteredBaseEntries = useMemo(() => {
     if (!formDef)
